@@ -3,10 +3,10 @@ import MLTensorNN
 import Testing
 import TestingUtils
 
-@testable import Bert
+@testable import BertEmbeddings
 
 @Test func testPooler() async {
-    let pooler1 = Bert.Pooler(
+    let pooler1 = BertEmbeddings.Pooler(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [5, 5]),
             bias: nil
@@ -20,7 +20,7 @@ import TestingUtils
     #expect(result1.shape == [1, 5])
     #expect(allClose(data1, [1, 1, 1, 1, 1]) == true)
 
-    let pooler2 = Bert.Pooler(
+    let pooler2 = BertEmbeddings.Pooler(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [5, 5]),
             bias: MLTensor.float32(shape: [5])
@@ -36,7 +36,7 @@ import TestingUtils
 }
 
 @Test func testIntermediate() async {
-    let intermediate1 = Bert.Intermediate(
+    let intermediate1 = BertEmbeddings.Intermediate(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [2, 3]),
             bias: nil
@@ -50,7 +50,7 @@ import TestingUtils
     #expect(result1.shape == [1, 2, 2])
     #expect(allClose(data1, [5.0, 14.0, 14.0, 50.0]) == true)
 
-    let intermediate2 = Bert.Intermediate(
+    let intermediate2 = BertEmbeddings.Intermediate(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [2, 3]),
             bias: MLTensor.float32(shape: [2])
@@ -66,7 +66,7 @@ import TestingUtils
 }
 
 @Test func testOutput() async {
-    let output1 = Bert.Output(
+    let output1 = BertEmbeddings.Output(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [4, 4]),
             bias: nil
@@ -91,7 +91,7 @@ import TestingUtils
             [0.0, 0.5527864, 2.8944273, 7.0249224, 0.0, 0.5527864, 2.8944273, 7.0249224])
             == true)
 
-    let output2 = Bert.Output(
+    let output2 = BertEmbeddings.Output(
         dense: MLTensorNN.linear(
             weight: MLTensor.float32(shape: [4, 4]),
             bias: MLTensor.float32(shape: [4])
@@ -121,7 +121,7 @@ import TestingUtils
     let wordEmbeddings = MLTensorNN.embedding(weight: MLTensor.float32(shape: [2, 4]))
     let positionEmbeddings = MLTensorNN.embedding(weight: MLTensor.float32(shape: [1, 4]))
     let tokenTypeEmbeddings = MLTensorNN.embedding(weight: MLTensor.float32(shape: [2, 4]))
-    let embeddings = Bert.Embeddings(
+    let embeddings = BertEmbeddings.Embeddings(
         wordEmbeddings: wordEmbeddings,
         positionEmbeddings: positionEmbeddings,
         tokenTypeEmbeddings: tokenTypeEmbeddings,

@@ -1,5 +1,5 @@
 {
-  "originHash" : "90d3e77a82d5dbfe903ba2ca58c2d35406bfb7f25cca4bcdcfdbe5fe84b4fd0f",
+  "originHash" : "84852b9fd32a4bdaf8fd52bf47dd7b37c2b2157141f643ea13139b418761bb79",
   "pins" : [
     {
       "identity" : "jinja",
@@ -40,10 +40,9 @@
     {
       "identity" : "swift-transformers",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/jkrukowski/swift-transformers",
+      "location" : "https://github.com/huggingface/swift-transformers.git",
       "state" : {
-        "branch" : "bert-pre-tokenizer",
-        "revision" : "597756c127b7e57b90985cdf687dab364edca9ba"
+        "revision" : "2c68d534155b702a504541e60d8eb6e0ab395478"
       }
     }
   ],

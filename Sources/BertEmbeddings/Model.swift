@@ -3,9 +3,9 @@ import Foundation
 import MLTensorNN
 @preconcurrency import Tokenizers
 
-public enum Bert {}
+public enum BertEmbeddings {}
 
-extension Bert {
+extension BertEmbeddings {
     public struct ModelConfig: Codable {
         public var modelType: String
         public var numHiddenLayers: Int
@@ -50,7 +50,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Pooler: Sendable {
         let dense: MLTensorNN.Layer
 
@@ -66,7 +66,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Embeddings: Sendable {
         let wordEmbeddings: MLTensorNN.Layer
         let positionEmbeddings: MLTensorNN.Layer
@@ -113,7 +113,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Output: Sendable {
         let dense: MLTensorNN.Layer
         let layerNorm: MLTensorNN.Layer
@@ -137,7 +137,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Intermediate: Sendable {
         let dense: MLTensorNN.Layer
 
@@ -152,7 +152,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct SelfOutput: Sendable {
         let dense: MLTensorNN.Layer
         let layerNorm: MLTensorNN.Layer
@@ -176,7 +176,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct SelfAttention: Sendable {
         let query: MLTensorNN.Layer
         let key: MLTensorNN.Layer
@@ -232,12 +232,15 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Attention: Sendable {
-        let selfAttention: Bert.SelfAttention
-        let output: Bert.SelfOutput
+        let selfAttention: BertEmbeddings.SelfAttention
+        let output: BertEmbeddings.SelfOutput
 
-        public init(selfAttention: Bert.SelfAttention, output: Bert.SelfOutput) {
+        public init(
+            selfAttention: BertEmbeddings.SelfAttention,
+            output: BertEmbeddings.SelfOutput
+        ) {
             self.selfAttention = selfAttention
             self.output = output
         }
@@ -258,16 +261,16 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Layer: Sendable {
-        let attention: Bert.Attention
-        let intermediate: Bert.Intermediate
-        let output: Bert.Output
+        let attention: BertEmbeddings.Attention
+        let intermediate: BertEmbeddings.Intermediate
+        let output: BertEmbeddings.Output
 
         public init(
-            attention: Bert.Attention,
-            intermediate: Bert.Intermediate,
-            output: Bert.Output
+            attention: BertEmbeddings.Attention,
+            intermediate: BertEmbeddings.Intermediate,
+            output: BertEmbeddings.Output
         ) {
             self.attention = attention
             self.intermediate = intermediate
@@ -293,11 +296,11 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Encoder: Sendable {
-        let layers: [Bert.Layer]
+        let layers: [BertEmbeddings.Layer]
 
-        public init(layers: [Bert.Layer]) {
+        public init(layers: [BertEmbeddings.Layer]) {
             self.layers = layers
         }
 
@@ -317,16 +320,16 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct Model: Sendable {
-        let embeddings: Bert.Embeddings
-        let encoder: Bert.Encoder
-        let pooler: Bert.Pooler
+        let embeddings: BertEmbeddings.Embeddings
+        let encoder: BertEmbeddings.Encoder
+        let pooler: BertEmbeddings.Pooler
 
         public init(
-            embeddings: Bert.Embeddings,
-            encoder: Bert.Encoder,
-            pooler: Bert.Pooler
+            embeddings: BertEmbeddings.Embeddings,
+            encoder: BertEmbeddings.Encoder,
+            pooler: BertEmbeddings.Pooler
         ) {
             self.embeddings = embeddings
             self.encoder = encoder
@@ -350,12 +353,15 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension BertEmbeddings {
     public struct ModelBundle: Sendable {
-        public let model: Bert.Model
+        public let model: BertEmbeddings.Model
         public let tokenizer: any Tokenizer
 
-        public init(model: Bert.Model, tokenizer: any Tokenizer) {
+        public init(
+            model: BertEmbeddings.Model,
+            tokenizer: any Tokenizer
+        ) {
             self.model = model
             self.tokenizer = tokenizer
         }

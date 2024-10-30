@@ -17,23 +17,23 @@ let package = Package(
             targets: ["EmbeddingsCLI"]
         ),
         .library(
-            name: "Bert",
-            targets: ["Bert"]),
+            name: "BertEmbeddings",
+            targets: ["BertEmbeddings"]),
         .library(
             name: "MLTensorNN",
             targets: ["MLTensorNN"]),
     ],
     dependencies: [
         .package(
-            url: "https://github.com/apple/swift-numerics",
+            url: "https://github.com/apple/swift-numerics.git",
             from: "1.0.2"
         ),
         .package(
-            url: "https://github.com/jkrukowski/swift-transformers",
-            branch: "bert-pre-tokenizer"
+            url: "https://github.com/huggingface/swift-transformers.git",
+            revision: "2c68d534155b702a504541e60d8eb6e0ab395478"
         ),
         .package(
-            url: "https://github.com/jkrukowski/swift-safetensors",
+            url: "https://github.com/jkrukowski/swift-safetensors.git",
             from: "0.0.6"
         ),
         .package(
@@ -45,13 +45,13 @@ let package = Package(
         .executableTarget(
             name: "EmbeddingsCLI",
             dependencies: [
-                "Bert",
+                "BertEmbeddings",
                 .product(name: "Safetensors", package: "swift-safetensors"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
         .target(
-            name: "Bert",
+            name: "BertEmbeddings",
             dependencies: [
                 "MLTensorNN",
                 .product(name: "Transformers", package: "swift-transformers"),
@@ -66,9 +66,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "BertTests",
+            name: "BertEmbeddingsTests",
             dependencies: [
-                "Bert",
+                "BertEmbeddings",
                 "MLTensorNN",
                 "TestingUtils",
                 .product(name: "Safetensors", package: "swift-safetensors"),

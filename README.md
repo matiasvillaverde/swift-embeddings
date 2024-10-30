@@ -21,17 +21,19 @@ In the target dependencies add:
 
 ```swift
 dependencies: [
-    .product(name: "Bert", package: "swift-embeddings")
+    .product(name: "BertEmbeddings", package: "swift-embeddings")
 ]
 ```
 
 ## Usage
 
 ```swift
-import Bert
+import BertEmbeddings
 
 // load model and tokenizer from Hugging Face
-let modelBundle = try await Bert.loadModelBundle(from: "sentence-transformers/all-MiniLM-L6-v2")
+let modelBundle = try await BertEmbeddings.loadModelBundle(
+    from: "sentence-transformers/all-MiniLM-L6-v2"
+)
 
 // encode text
 let result: [Float32] = await modelBundle.encode(text)
@@ -45,7 +47,7 @@ print(result)
 To run the command line demo, use the following command:
 
 ```bash
-swift run embeddings-cli [--model-id <model-id>] [--text <text>]
+swift run embeddings-cli bert [--model-id <model-id>] [--text <text>]
 ```
 
 Command line options:
