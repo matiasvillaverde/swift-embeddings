@@ -1,5 +1,5 @@
 import ArgumentParser
-import BertEmbeddings
+import Embeddings
 import Foundation
 
 struct BertCommand: AsyncParsableCommand {
@@ -9,10 +9,12 @@ struct BertCommand: AsyncParsableCommand {
     )
     @Option var modelId: String = "sentence-transformers/all-MiniLM-L6-v2"
     @Option var text: String = "Text to encode"
+    @Option var maxSequenceLength: Int = 512
 
     func run() async throws {
-        let modelBundle = try await BertEmbeddings.loadModelBundle(from: modelId)
-        let result: [Float32] = await modelBundle.encode(text)
+        let modelBundle = try await Bert.loadModelBundle(from: modelId)
+        let encoded = modelBundle.encode(text, maxSequenceLength: maxSequenceLength)
+        let result = await encoded.cast(to: Float.self).shapedArray(of: Float.self).scalars
         print(result)
     }
 }

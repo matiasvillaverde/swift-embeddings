@@ -10,7 +10,7 @@ public enum GELUApproximation {
 public func gelu(_ x: MLTensor, approximation: GELUApproximation? = nil) -> MLTensor {
     switch approximation {
     case .none:
-        return x * (1 + erf(x / sqrt(2 as Float32))) / 2
+        return x * (1 + erf(x / sqrt(2 as Float))) / 2
     case .fast:
         return x * sigmoid(1.702 * x)
     case .precise, .tanh:

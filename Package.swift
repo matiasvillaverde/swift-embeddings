@@ -17,8 +17,8 @@ let package = Package(
             targets: ["EmbeddingsCLI"]
         ),
         .library(
-            name: "BertEmbeddings",
-            targets: ["BertEmbeddings"]),
+            name: "Embeddings",
+            targets: ["Embeddings"]),
         .library(
             name: "MLTensorNN",
             targets: ["MLTensorNN"]),
@@ -45,13 +45,14 @@ let package = Package(
         .executableTarget(
             name: "EmbeddingsCLI",
             dependencies: [
-                "BertEmbeddings",
+                "Embeddings",
+                "MLTensorNN",
                 .product(name: "Safetensors", package: "swift-safetensors"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
         .target(
-            name: "BertEmbeddings",
+            name: "Embeddings",
             dependencies: [
                 "MLTensorNN",
                 .product(name: "Transformers", package: "swift-transformers"),
@@ -66,9 +67,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "BertEmbeddingsTests",
+            name: "EmbeddingsTests",
             dependencies: [
-                "BertEmbeddings",
+                "Embeddings",
                 "MLTensorNN",
                 "TestingUtils",
                 .product(name: "Safetensors", package: "swift-safetensors"),

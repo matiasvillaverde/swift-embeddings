@@ -3,9 +3,9 @@ import Foundation
 import MLTensorNN
 @preconcurrency import Tokenizers
 
-public enum BertEmbeddings {}
+public enum Bert {}
 
-extension BertEmbeddings {
+extension Bert {
     public struct ModelConfig: Codable {
         public var modelType: String
         public var numHiddenLayers: Int
@@ -50,7 +50,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Pooler: Sendable {
         let dense: MLTensorNN.Layer
 
@@ -66,7 +66,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Embeddings: Sendable {
         let wordEmbeddings: MLTensorNN.Layer
         let positionEmbeddings: MLTensorNN.Layer
@@ -113,7 +113,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Output: Sendable {
         let dense: MLTensorNN.Layer
         let layerNorm: MLTensorNN.Layer
@@ -137,7 +137,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Intermediate: Sendable {
         let dense: MLTensorNN.Layer
 
@@ -152,7 +152,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct SelfOutput: Sendable {
         let dense: MLTensorNN.Layer
         let layerNorm: MLTensorNN.Layer
@@ -176,7 +176,7 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct SelfAttention: Sendable {
         let query: MLTensorNN.Layer
         let key: MLTensorNN.Layer
@@ -232,14 +232,14 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Attention: Sendable {
-        let selfAttention: BertEmbeddings.SelfAttention
-        let output: BertEmbeddings.SelfOutput
+        let selfAttention: Bert.SelfAttention
+        let output: Bert.SelfOutput
 
         public init(
-            selfAttention: BertEmbeddings.SelfAttention,
-            output: BertEmbeddings.SelfOutput
+            selfAttention: Bert.SelfAttention,
+            output: Bert.SelfOutput
         ) {
             self.selfAttention = selfAttention
             self.output = output
@@ -261,16 +261,16 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Layer: Sendable {
-        let attention: BertEmbeddings.Attention
-        let intermediate: BertEmbeddings.Intermediate
-        let output: BertEmbeddings.Output
+        let attention: Bert.Attention
+        let intermediate: Bert.Intermediate
+        let output: Bert.Output
 
         public init(
-            attention: BertEmbeddings.Attention,
-            intermediate: BertEmbeddings.Intermediate,
-            output: BertEmbeddings.Output
+            attention: Bert.Attention,
+            intermediate: Bert.Intermediate,
+            output: Bert.Output
         ) {
             self.attention = attention
             self.intermediate = intermediate
@@ -296,11 +296,11 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Encoder: Sendable {
-        let layers: [BertEmbeddings.Layer]
+        let layers: [Bert.Layer]
 
-        public init(layers: [BertEmbeddings.Layer]) {
+        public init(layers: [Bert.Layer]) {
             self.layers = layers
         }
 
@@ -320,16 +320,16 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct Model: Sendable {
-        let embeddings: BertEmbeddings.Embeddings
-        let encoder: BertEmbeddings.Encoder
-        let pooler: BertEmbeddings.Pooler
+        let embeddings: Bert.Embeddings
+        let encoder: Bert.Encoder
+        let pooler: Bert.Pooler
 
         public init(
-            embeddings: BertEmbeddings.Embeddings,
-            encoder: BertEmbeddings.Encoder,
-            pooler: BertEmbeddings.Pooler
+            embeddings: Bert.Embeddings,
+            encoder: Bert.Encoder,
+            pooler: Bert.Pooler
         ) {
             self.embeddings = embeddings
             self.encoder = encoder
@@ -353,26 +353,43 @@ extension BertEmbeddings {
     }
 }
 
-extension BertEmbeddings {
+extension Bert {
     public struct ModelBundle: Sendable {
-        public let model: BertEmbeddings.Model
+        public let model: Bert.Model
         public let tokenizer: any Tokenizer
 
         public init(
-            model: BertEmbeddings.Model,
+            model: Bert.Model,
             tokenizer: any Tokenizer
         ) {
             self.model = model
             self.tokenizer = tokenizer
         }
 
-        public func encode<Scalar: MLShapedArrayScalar & MLTensorScalar>(
-            _ text: String
-        ) async -> [Scalar] {
-            let encodedText = tokenizer.encode(text: text).map { Int32($0) }
-            let inputIds = MLTensor(shape: [1, encodedText.count], scalars: encodedText)
+        public func encode(
+            _ text: String,
+            maxSequenceLength: Int = 512
+        ) -> MLTensor {
+            let tokens = tokenizer.tokenize(text, maxSequenceLength: maxSequenceLength)
+            let inputIds = MLTensor(shape: [1, tokens.count], scalars: tokens)
             let result = model(inputIds: inputIds)
-            return await result.sequenceOutput[0..., 0, 0...].shapedArray(of: Scalar.self).scalars
+            return result.sequenceOutput[0..., 0, 0...]
+        }
+
+        public func batchEncode(
+            _ texts: [String],
+            padTokenId: Int32 = 1,
+            maxSequenceLength: Int = 512
+        ) -> MLTensor {
+            let encodedTexts = tokenizer.tokenizeWithPadding(
+                texts,
+                padTokenId: padTokenId,
+                maxSequenceLength: maxSequenceLength
+            )
+            let inputIds = MLTensor(
+                shape: [encodedTexts.count, encodedTexts[0].count],
+                scalars: encodedTexts.flatMap { $0 })
+            return model(inputIds: inputIds).sequenceOutput[0..., 0, 0...]
         }
     }
 }

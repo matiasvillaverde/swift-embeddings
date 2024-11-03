@@ -1,5 +1,4 @@
 import ArgumentParser
-import BertEmbeddings
 import Foundation
 
 @main

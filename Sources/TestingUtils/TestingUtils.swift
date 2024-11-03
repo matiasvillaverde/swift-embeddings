@@ -11,9 +11,9 @@ extension MLTensor {
 }
 
 extension MLTensor {
-    package static func float32(shape: [Int]) -> MLTensor {
+    package static func float(shape: [Int]) -> MLTensor {
         let count = shape.reduce(1, *)
-        return MLTensor(shape: shape, scalars: (0..<count).map { Float32($0) })
+        return MLTensor(shape: shape, scalars: (0..<count).map { Float($0) })
     }
 
     package static func int32(shape: [Int]) -> MLTensor {
