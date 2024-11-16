@@ -1,37 +1,30 @@
 import CoreML
 import Foundation
-@preconcurrency import Tokenizers
+import Hub
 
-extension Tokenizer {
-    func tokenizeWithPadding(
-        _ texts: [String],
-        padTokenId: Int32,
-        maxSequenceLength: Int
-    ) -> [[Int32]] {
-        var longest = 0
-        var result = [[Int32]]()
-        for text in texts {
-            let encoded = tokenize(text, maxSequenceLength: maxSequenceLength)
-            longest = max(longest, encoded.count)
-            result.append(encoded)
-        }
-        return result.map {
-            if $0.count < longest {
-                return $0 + Array(repeating: padTokenId, count: longest - $0.count)
-            } else {
-                return $0
-            }
-        }
-    }
+func downloadModelFromHub(
+    from hubRepoId: String,
+    downloadBase: URL? = nil,
+    useBackgroundSession: Bool = false
+) async throws -> URL {
+    let hubApi = HubApi(downloadBase: downloadBase, useBackgroundSession: useBackgroundSession)
+    let repo = Hub.Repo(id: hubRepoId, type: .models)
+    return try await hubApi.snapshot(
+        from: repo,
+        matching: [
+            "*.json",
+            "*.safetensors",
+            "*.py",
+            "tokenizer.model",
+            "*.tiktoken",
+            "*.txt",
+        ]
+    )
+}
 
-    func tokenize(
-        _ text: String,
-        maxSequenceLength: Int
-    ) -> [Int32] {
-        var encoded = self(text).map { Int32($0) }
-        if encoded.count > maxSequenceLength {
-            encoded.removeLast(encoded.count - maxSequenceLength)
-        }
-        return encoded
-    }
+func loadConfigFromFile<Config: Codable>(at url: URL) throws -> Config {
+    let configData = try Data(contentsOf: url)
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return try decoder.decode(Config.self, from: configData)
 }

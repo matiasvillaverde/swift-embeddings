@@ -20,8 +20,8 @@ let package = Package(
             name: "Embeddings",
             targets: ["Embeddings"]),
         .library(
-            name: "MLTensorNN",
-            targets: ["MLTensorNN"]),
+            name: "MLTensorUtils",
+            targets: ["MLTensorUtils"]),
     ],
     dependencies: [
         .package(
@@ -46,7 +46,7 @@ let package = Package(
             name: "EmbeddingsCLI",
             dependencies: [
                 "Embeddings",
-                "MLTensorNN",
+                "MLTensorUtils",
                 .product(name: "Safetensors", package: "swift-safetensors"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
@@ -54,12 +54,12 @@ let package = Package(
         .target(
             name: "Embeddings",
             dependencies: [
-                "MLTensorNN",
+                "MLTensorUtils",
                 .product(name: "Transformers", package: "swift-transformers"),
             ]
         ),
         .target(
-            name: "MLTensorNN"),
+            name: "MLTensorUtils"),
         .target(
             name: "TestingUtils",
             dependencies: [
@@ -70,15 +70,18 @@ let package = Package(
             name: "EmbeddingsTests",
             dependencies: [
                 "Embeddings",
-                "MLTensorNN",
+                "MLTensorUtils",
                 "TestingUtils",
                 .product(name: "Safetensors", package: "swift-safetensors"),
+            ],
+            resources: [
+                .copy("Resources")
             ]
         ),
         .testTarget(
-            name: "MLTensorNNTests",
+            name: "MLTensorUtilsTests",
             dependencies: [
-                "MLTensorNN",
+                "MLTensorUtils",
                 "TestingUtils",
             ]
         ),

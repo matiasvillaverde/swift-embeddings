@@ -1,6 +1,6 @@
 import CoreML
 import Foundation
-import MLTensorNN
+import MLTensorUtils
 @preconcurrency import Tokenizers
 
 public enum Bert {}
@@ -52,9 +52,9 @@ extension Bert {
 
 extension Bert {
     public struct Pooler: Sendable {
-        let dense: MLTensorNN.Layer
+        let dense: MLTensorUtils.Layer
 
-        public init(dense: @escaping MLTensorNN.Layer) {
+        public init(dense: @escaping MLTensorUtils.Layer) {
             self.dense = dense
         }
 
@@ -68,16 +68,16 @@ extension Bert {
 
 extension Bert {
     public struct Embeddings: Sendable {
-        let wordEmbeddings: MLTensorNN.Layer
-        let positionEmbeddings: MLTensorNN.Layer
-        let tokenTypeEmbeddings: MLTensorNN.Layer
-        let layerNorm: MLTensorNN.Layer
+        let wordEmbeddings: MLTensorUtils.Layer
+        let positionEmbeddings: MLTensorUtils.Layer
+        let tokenTypeEmbeddings: MLTensorUtils.Layer
+        let layerNorm: MLTensorUtils.Layer
 
         public init(
-            wordEmbeddings: @escaping MLTensorNN.Layer,
-            positionEmbeddings: @escaping MLTensorNN.Layer,
-            tokenTypeEmbeddings: @escaping MLTensorNN.Layer,
-            layerNorm: @escaping MLTensorNN.Layer
+            wordEmbeddings: @escaping MLTensorUtils.Layer,
+            positionEmbeddings: @escaping MLTensorUtils.Layer,
+            tokenTypeEmbeddings: @escaping MLTensorUtils.Layer,
+            layerNorm: @escaping MLTensorUtils.Layer
         ) {
             self.wordEmbeddings = wordEmbeddings
             self.positionEmbeddings = positionEmbeddings
@@ -115,12 +115,12 @@ extension Bert {
 
 extension Bert {
     public struct Output: Sendable {
-        let dense: MLTensorNN.Layer
-        let layerNorm: MLTensorNN.Layer
+        let dense: MLTensorUtils.Layer
+        let layerNorm: MLTensorUtils.Layer
 
         public init(
-            dense: @escaping MLTensorNN.Layer,
-            layerNorm: @escaping MLTensorNN.Layer
+            dense: @escaping MLTensorUtils.Layer,
+            layerNorm: @escaping MLTensorUtils.Layer
         ) {
             self.dense = dense
             self.layerNorm = layerNorm
@@ -139,9 +139,9 @@ extension Bert {
 
 extension Bert {
     public struct Intermediate: Sendable {
-        let dense: MLTensorNN.Layer
+        let dense: MLTensorUtils.Layer
 
-        public init(dense: @escaping MLTensorNN.Layer) {
+        public init(dense: @escaping MLTensorUtils.Layer) {
             self.dense = dense
         }
 
@@ -154,12 +154,12 @@ extension Bert {
 
 extension Bert {
     public struct SelfOutput: Sendable {
-        let dense: MLTensorNN.Layer
-        let layerNorm: MLTensorNN.Layer
+        let dense: MLTensorUtils.Layer
+        let layerNorm: MLTensorUtils.Layer
 
         public init(
-            dense: @escaping MLTensorNN.Layer,
-            layerNorm: @escaping MLTensorNN.Layer
+            dense: @escaping MLTensorUtils.Layer,
+            layerNorm: @escaping MLTensorUtils.Layer
         ) {
             self.dense = dense
             self.layerNorm = layerNorm
@@ -178,17 +178,17 @@ extension Bert {
 
 extension Bert {
     public struct SelfAttention: Sendable {
-        let query: MLTensorNN.Layer
-        let key: MLTensorNN.Layer
-        let value: MLTensorNN.Layer
+        let query: MLTensorUtils.Layer
+        let key: MLTensorUtils.Layer
+        let value: MLTensorUtils.Layer
         let numAttentionHeads: Int
         let attentionHeadSize: Int
         let allHeadSize: Int
 
         public init(
-            query: @escaping MLTensorNN.Layer,
-            key: @escaping MLTensorNN.Layer,
-            value: @escaping MLTensorNN.Layer,
+            query: @escaping MLTensorUtils.Layer,
+            key: @escaping MLTensorUtils.Layer,
+            value: @escaping MLTensorUtils.Layer,
             numAttentionHeads: Int,
             attentionHeadSize: Int,
             allHeadSize: Int
@@ -356,11 +356,11 @@ extension Bert {
 extension Bert {
     public struct ModelBundle: Sendable {
         public let model: Bert.Model
-        public let tokenizer: any Tokenizer
+        public let tokenizer: any TextTokenizer
 
         public init(
             model: Bert.Model,
-            tokenizer: any Tokenizer
+            tokenizer: any TextTokenizer
         ) {
             self.model = model
             self.tokenizer = tokenizer
@@ -368,9 +368,9 @@ extension Bert {
 
         public func encode(
             _ text: String,
-            maxSequenceLength: Int = 512
+            maxLength: Int = 512
         ) -> MLTensor {
-            let tokens = tokenizer.tokenize(text, maxSequenceLength: maxSequenceLength)
+            let tokens = tokenizer.tokenize(text, maxLength: maxLength)
             let inputIds = MLTensor(shape: [1, tokens.count], scalars: tokens)
             let result = model(inputIds: inputIds)
             return result.sequenceOutput[0..., 0, 0...]
@@ -378,14 +378,11 @@ extension Bert {
 
         public func batchEncode(
             _ texts: [String],
-            padTokenId: Int32 = 1,
-            maxSequenceLength: Int = 512
+            padTokenId: Int = 0,
+            maxLength: Int = 512
         ) -> MLTensor {
-            let encodedTexts = tokenizer.tokenizeWithPadding(
-                texts,
-                padTokenId: padTokenId,
-                maxSequenceLength: maxSequenceLength
-            )
+            let encodedTexts = tokenizer.tokenizePaddingToLongest(
+                texts, padTokenId: padTokenId, maxLength: maxLength)
             let inputIds = MLTensor(
                 shape: [encodedTexts.count, encodedTexts[0].count],
                 scalars: encodedTexts.flatMap { $0 })

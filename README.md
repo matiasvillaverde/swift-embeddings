@@ -16,6 +16,15 @@ Some of the supported models on `Hugging Face`:
 - [sentence-transformers/msmarco-bert-base-dot-v5](https://huggingface.co/sentence-transformers/msmarco-bert-base-dot-v5)
 - [thenlper/gte-base](https://huggingface.co/thenlper/gte-base)
 
+### CLIP (Contrastive Language–Image Pre-training)
+
+NOTE: only text encoding is supported for now.
+Some of the supported models on `Hugging Face`:
+
+- [jkrukowski/clip-vit-base-patch16](https://huggingface.co/jkrukowski/clip-vit-base-patch16)
+- [jkrukowski/clip-vit-base-patch32](https://huggingface.co/jkrukowski/clip-vit-base-patch32)
+- [jkrukowski/clip-vit-large-patch14](https://huggingface.co/jkrukowski/clip-vit-large-patch14)
+
 ## Installation
 
 Add the following to your `Package.swift` file. In the package dependencies add:
@@ -58,7 +67,7 @@ print(result)
 
 ```swift
 import Embeddings
-import MLTensorNN
+import MLTensorUtils
 
 let texts = [
     "The cat is black",
@@ -69,25 +78,44 @@ let modelBundle = try await Bert.loadModelBundle(
     from: "sentence-transformers/all-MiniLM-L6-v2"
 )
 let encoded = modelBundle.batchEncode(texts)
-let similarity = cosineSimilarity(encoded, encoded)
-let result = await similarity.cast(to: Float.self).shapedArray(of: Float.self).scalars
+let distance = cosineDistance(encoded, encoded)
+let result = await distance.cast(to: Float.self).shapedArray(of: Float.self).scalars
 print(result)
 ```
 
 ## Command Line Demo
 
-To run the command line demo, use the following command:
+### BERT
+
+To run the `BERT` command line demo, use the following command:
 
 ```bash
-swift run embeddings-cli bert [--model-id <model-id>] [--text <text>] [--max-sequence-length <max-sequence-length>]
+swift run embeddings-cli bert [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
 ```
 
 Command line options:
 
 ```bash
 --model-id <model-id>                       (default: sentence-transformers/all-MiniLM-L6-v2)
---text <text>                               (default: Text to encode)
---max-sequence-length <max-sequence-length> (default: 512)
+--text <text>                               (default: a photo of a dog)
+--max-length <max-length>                   (default: 512)
+-h, --help                                  Show help information.
+```
+
+### CLIP
+
+To run the `CLIP` command line demo, use the following command:
+
+```bash
+swift run embeddings-cli clip [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
+```
+
+Command line options:
+
+```bash
+--model-id <model-id>                       (default: jkrukowski/clip-vit-base-patch16)
+--text <text>                               (default: a photo of a dog)
+--max-length <max-length>                   (default: 77)
 -h, --help                                  Show help information.
 ```
 
@@ -96,7 +124,7 @@ Command line options:
 This project uses [swift-format](https://github.com/swiftlang/swift-format). To format the code run:
 
 ```bash
-swift-format format . -i -r --configuration .swift-format
+swift format . -i -r --configuration .swift-format
 ```
 
 ## Acknowledgements

@@ -1,14 +1,15 @@
 import CoreML
-import MLTensorNN
+import MLTensorUtils
 import Testing
 import TestingUtils
+import XCTest
 
 @testable import Embeddings
 
 struct BertTests {
     @Test func pooler() async {
         let pooler1 = Bert.Pooler(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [5, 5]),
                 bias: nil
             )
@@ -22,7 +23,7 @@ struct BertTests {
         #expect(allClose(data1, [1, 1, 1, 1, 1]) == true)
 
         let pooler2 = Bert.Pooler(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [5, 5]),
                 bias: MLTensor.float(shape: [5])
             )
@@ -38,7 +39,7 @@ struct BertTests {
 
     @Test func intermediate() async {
         let intermediate1 = Bert.Intermediate(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [2, 3]),
                 bias: nil
             )
@@ -52,7 +53,7 @@ struct BertTests {
         #expect(allClose(data1, [5.0, 14.0, 14.0, 50.0]) == true)
 
         let intermediate2 = Bert.Intermediate(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [2, 3]),
                 bias: MLTensor.float(shape: [2])
             )
@@ -68,11 +69,11 @@ struct BertTests {
 
     @Test func output() async {
         let output1 = Bert.Output(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [4, 4]),
                 bias: nil
             ),
-            layerNorm: MLTensorNN.layerNorm(
+            layerNorm: MLTensorUtils.layerNorm(
                 weight: MLTensor.float(shape: [4]),
                 bias: MLTensor.float(shape: [4]),
                 epsilon: 1e-5
@@ -93,11 +94,11 @@ struct BertTests {
                 == true)
 
         let output2 = Bert.Output(
-            dense: MLTensorNN.linear(
+            dense: MLTensorUtils.linear(
                 weight: MLTensor.float(shape: [4, 4]),
                 bias: MLTensor.float(shape: [4])
             ),
-            layerNorm: MLTensorNN.layerNorm(
+            layerNorm: MLTensorUtils.layerNorm(
                 weight: MLTensor.float(shape: [4]),
                 bias: MLTensor.float(shape: [4]),
                 epsilon: 1e-5
@@ -117,17 +118,19 @@ struct BertTests {
                 [0.0, 0.55278635, 2.8944273, 7.0249224, 0.0, 0.5527864, 2.8944273, 7.0249224])
                 == true)
     }
+}
 
-    // TODO: this test is not stable, need to investigate
-    @Test func embeddings() async {
-        let wordEmbeddings = MLTensorNN.embedding(weight: MLTensor.float(shape: [2, 4]))
-        let positionEmbeddings = MLTensorNN.embedding(weight: MLTensor.float(shape: [1, 4]))
-        let tokenTypeEmbeddings = MLTensorNN.embedding(weight: MLTensor.float(shape: [2, 4]))
+final class BertEmbeddingTests: XCTestCase {
+    // NOTE: this test is not stable when running using `Testing` library, not sure why
+    func testEmbeddings() async {
+        let wordEmbeddings = MLTensorUtils.embedding(weight: MLTensor.float(shape: [2, 4]))
+        let positionEmbeddings = MLTensorUtils.embedding(weight: MLTensor.float(shape: [1, 4]))
+        let tokenTypeEmbeddings = MLTensorUtils.embedding(weight: MLTensor.float(shape: [2, 4]))
         let embeddings = Bert.Embeddings(
             wordEmbeddings: wordEmbeddings,
             positionEmbeddings: positionEmbeddings,
             tokenTypeEmbeddings: tokenTypeEmbeddings,
-            layerNorm: MLTensorNN.layerNorm(
+            layerNorm: MLTensorUtils.layerNorm(
                 weight: MLTensor.float(shape: [4]),
                 bias: MLTensor.float(shape: [4]),
                 epsilon: 1e-5
@@ -137,9 +140,8 @@ struct BertTests {
         let result = embeddings(inputIds: MLTensor.int32(shape: [1, 2]))
         let data = await result.scalars(of: Float.self)
 
-        #expect(result.shape == [1, 2, 4])
-        #expect(
-            allClose(data, [0, 0.552787, 2.89443, 7.02492, 0, 0.552787, 2.89443, 7.02492])
-                == true)
+        XCTAssertEqual(result.shape, [1, 2, 4])
+        XCTAssertTrue(
+            allClose(data, [0, 0.552787, 2.89443, 7.02492, 0, 0.552787, 2.89443, 7.02492]))
     }
 }
