@@ -342,11 +342,13 @@ extension Bert {
             attentionMask: MLTensor? = nil
         ) -> (sequenceOutput: MLTensor, pooledOutput: MLTensor) {
             let embeddingOutput = embeddings(inputIds: inputIds, tokenTypeIds: tokenTypeIds)
-            if let attentionMask {
-                var attentionMask = attentionMask.expandingShape(at: 1, 1)
-                attentionMask = (1.0 - attentionMask) * -10000.0
-            }
-            let encoderOutput = encoder(hiddenStates: embeddingOutput, attentionMask: attentionMask)
+            let mask: MLTensor? =
+                if let attentionMask {
+                    (1.0 - attentionMask.expandingShape(at: 1, 1)) * -10000.0
+                } else {
+                    nil
+                }
+            let encoderOutput = encoder(hiddenStates: embeddingOutput, attentionMask: mask)
             let pooledOutput = pooler(encoderOutput)
             return (encoderOutput, pooledOutput)
         }

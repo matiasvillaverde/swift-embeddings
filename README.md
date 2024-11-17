@@ -31,7 +31,7 @@ Add the following to your `Package.swift` file. In the package dependencies add:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.2")
+    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.4")
 ]
 ```
 

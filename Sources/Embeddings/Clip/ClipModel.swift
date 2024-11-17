@@ -217,9 +217,7 @@ extension Clip {
     public struct Encoder: Sendable {
         let layers: [EncoderLayer]
 
-        public init(
-            layers: [EncoderLayer]
-        ) {
+        public init(layers: [EncoderLayer]) {
             self.layers = layers
         }
 
