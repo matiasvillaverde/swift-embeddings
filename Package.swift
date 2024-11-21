@@ -55,6 +55,7 @@ let package = Package(
             name: "Embeddings",
             dependencies: [
                 "MLTensorUtils",
+                .product(name: "Safetensors", package: "swift-safetensors"),
                 .product(name: "Transformers", package: "swift-transformers"),
             ]
         ),
