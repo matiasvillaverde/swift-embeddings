@@ -3,54 +3,63 @@ import Foundation
 import MLTensorUtils
 @preconcurrency import Tokenizers
 
-public enum Bert {}
+public enum XLMRoberta {}
 
-extension Bert {
+extension XLMRoberta {
     public struct ModelConfig: Codable {
-        public var modelType: String
-        public var numHiddenLayers: Int
-        public var numAttentionHeads: Int
-        public var hiddenSize: Int
-        public var intermediateSize: Int
-        public var maxPositionEmbeddings: Int
-        public var hiddenDropoutProb: Float
-        public var attentionProbsDropoutProb: Float
-        public var typeVocabSize: Int
-        public var initializerRange: Float
-        public var layerNormEps: Float
-        public var vocabSize: Int
+        public let hiddenSize: Int
+        public let numHiddenLayers: Int
+        public let intermediateSize: Int
+        public let numAttentionHeads: Int
+        public let maxPositionEmbeddings: Int
+        public let layerNormEps: Float
+        public let vocabSize: Int
+        public let addPoolingLayer: Bool?
+        public let attentionProbsDropoutProb: Float
+        public let hiddenDropoutProb: Float
+        public let typeVocabSize: Int
+        public let outputPast: Bool
+        public let padTokenId: Int
+        public let positionEmbeddingType: String
+        public let poolingConfig: [String: String]?
 
         public init(
-            modelType: String,
-            numHiddenLayers: Int,
-            numAttentionHeads: Int,
             hiddenSize: Int,
+            numHiddenLayers: Int,
             intermediateSize: Int,
+            numAttentionHeads: Int,
             maxPositionEmbeddings: Int,
-            hiddenDropoutProb: Float = 0.1,
-            attentionProbsDropoutProb: Float = 0.1,
-            typeVocabSize: Int = 2,
-            initializerRange: Float = 0.02,
-            layerNormEps: Float = 1e-12,
-            vocabSize: Int = 30522
+            layerNormEps: Float,
+            vocabSize: Int,
+            addPoolingLayer: Bool?,
+            attentionProbsDropoutProb: Float,
+            hiddenDropoutProb: Float,
+            typeVocabSize: Int,
+            outputPast: Bool,
+            padTokenId: Int,
+            positionEmbeddingType: String,
+            poolingConfig: [String: String]?
         ) {
-            self.modelType = modelType
-            self.numHiddenLayers = numHiddenLayers
-            self.numAttentionHeads = numAttentionHeads
             self.hiddenSize = hiddenSize
+            self.numHiddenLayers = numHiddenLayers
             self.intermediateSize = intermediateSize
+            self.numAttentionHeads = numAttentionHeads
             self.maxPositionEmbeddings = maxPositionEmbeddings
-            self.hiddenDropoutProb = hiddenDropoutProb
-            self.attentionProbsDropoutProb = attentionProbsDropoutProb
-            self.typeVocabSize = typeVocabSize
-            self.initializerRange = initializerRange
             self.layerNormEps = layerNormEps
             self.vocabSize = vocabSize
+            self.addPoolingLayer = addPoolingLayer
+            self.attentionProbsDropoutProb = attentionProbsDropoutProb
+            self.hiddenDropoutProb = hiddenDropoutProb
+            self.typeVocabSize = typeVocabSize
+            self.outputPast = outputPast
+            self.padTokenId = padTokenId
+            self.positionEmbeddingType = positionEmbeddingType
+            self.poolingConfig = poolingConfig
         }
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct Pooler: Sendable {
         let dense: MLTensorUtils.Layer
 
@@ -58,7 +67,7 @@ extension Bert {
             self.dense = dense
         }
 
-        public func callAsFunction(_ hiddenStates: MLTensor) -> MLTensor {
+        public func callAsFunction(hiddenStates: MLTensor) -> MLTensor {
             let firstTokenTensor = hiddenStates[0..., 0]
             let pooledOutput = dense(firstTokenTensor)
             return pooledOutput.tanh()
@@ -66,78 +75,63 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct Embeddings: Sendable {
         let wordEmbeddings: MLTensorUtils.Layer
         let positionEmbeddings: MLTensorUtils.Layer
         let tokenTypeEmbeddings: MLTensorUtils.Layer
         let layerNorm: MLTensorUtils.Layer
+        let paddingIndex: Int32
 
         public init(
             wordEmbeddings: @escaping MLTensorUtils.Layer,
             positionEmbeddings: @escaping MLTensorUtils.Layer,
             tokenTypeEmbeddings: @escaping MLTensorUtils.Layer,
-            layerNorm: @escaping MLTensorUtils.Layer
+            layerNorm: @escaping MLTensorUtils.Layer,
+            paddingIndex: Int32
         ) {
             self.wordEmbeddings = wordEmbeddings
             self.positionEmbeddings = positionEmbeddings
             self.tokenTypeEmbeddings = tokenTypeEmbeddings
             self.layerNorm = layerNorm
+            self.paddingIndex = paddingIndex
+        }
+
+        private func createPositionIds(
+            from inputIds: MLTensor,
+            pastKeyValuesLength: Int32
+        ) -> MLTensor {
+            let mask = (inputIds .!= paddingIndex).cast(to: Int32.self)
+            let incrementalIndices = (mask.cumulativeSum(alongAxis: 1) + pastKeyValuesLength) * mask
+            return incrementalIndices + paddingIndex
         }
 
         public func callAsFunction(
             inputIds: MLTensor,
             tokenTypeIds: MLTensor? = nil,
-            positionIds: MLTensor? = nil
+            positionIds: MLTensor? = nil,
+            inputsEmbeds: MLTensor? = nil,
+            pastKeyValuesLength: Int32 = 0
         ) -> MLTensor {
-            let seqLength = inputIds.shape[1]
             let positionIds =
                 positionIds
-                ?? MLTensor(
-                    shape: [1, seqLength],
-                    scalars: 0..<Int32(seqLength),
-                    scalarType: Int32.self
-                )
+                ?? createPositionIds(from: inputIds, pastKeyValuesLength: pastKeyValuesLength)
             let tokenTypeIds =
                 tokenTypeIds
                 ?? MLTensor(
                     zeros: inputIds.shape,
                     scalarType: Int32.self
                 )
-            let wordsEmbeddings = wordEmbeddings(inputIds)
+            let inputEmbeddings = inputsEmbeds ?? wordEmbeddings(inputIds)
             let positionEmbeddings = positionEmbeddings(positionIds)
             let tokenTypeEmbeddings = tokenTypeEmbeddings(tokenTypeIds)
-            let embeddings = wordsEmbeddings + positionEmbeddings + tokenTypeEmbeddings
+            let embeddings = inputEmbeddings + tokenTypeEmbeddings + positionEmbeddings
             return layerNorm(embeddings)
         }
     }
 }
 
-extension Bert {
-    public struct Output: Sendable {
-        let dense: MLTensorUtils.Layer
-        let layerNorm: MLTensorUtils.Layer
-
-        public init(
-            dense: @escaping MLTensorUtils.Layer,
-            layerNorm: @escaping MLTensorUtils.Layer
-        ) {
-            self.dense = dense
-            self.layerNorm = layerNorm
-        }
-
-        public func callAsFunction(
-            hiddenStates: MLTensor,
-            inputTensor: MLTensor
-        ) -> MLTensor {
-            let dense = dense(hiddenStates)
-            let layerNormInput = dense + inputTensor
-            return layerNorm(layerNormInput)
-        }
-    }
-}
-
-extension Bert {
+extension XLMRoberta {
     public struct Intermediate: Sendable {
         let dense: MLTensorUtils.Layer
 
@@ -152,7 +146,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct SelfOutput: Sendable {
         let dense: MLTensorUtils.Layer
         let layerNorm: MLTensorUtils.Layer
@@ -176,7 +170,7 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct SelfAttention: Sendable {
         let query: MLTensorUtils.Layer
         let key: MLTensorUtils.Layer
@@ -184,6 +178,7 @@ extension Bert {
         let numAttentionHeads: Int
         let attentionHeadSize: Int
         let allHeadSize: Int
+        let scale: Float
 
         public init(
             query: @escaping MLTensorUtils.Layer,
@@ -191,7 +186,8 @@ extension Bert {
             value: @escaping MLTensorUtils.Layer,
             numAttentionHeads: Int,
             attentionHeadSize: Int,
-            allHeadSize: Int
+            allHeadSize: Int,
+            scale: Float
         ) {
             self.query = query
             self.key = key
@@ -199,6 +195,7 @@ extension Bert {
             self.numAttentionHeads = numAttentionHeads
             self.attentionHeadSize = attentionHeadSize
             self.allHeadSize = allHeadSize
+            self.scale = scale
         }
 
         private func transposeForScores(_ x: MLTensor) -> MLTensor {
@@ -208,38 +205,42 @@ extension Bert {
 
         public func callAsFunction(
             hiddenStates: MLTensor,
-            attentionMask: MLTensor?
+            attentionMask: MLTensor?,
+            headMask: MLTensor?
         ) -> MLTensor {
-            let mixedQueryLayer = query(hiddenStates)
-            let mixedKeyLayer = key(hiddenStates)
-            let mixedValueLayer = value(hiddenStates)
+            let queries = query(hiddenStates)
+            let keys = key(hiddenStates)
+            let values = value(hiddenStates)
 
-            let queryLayer = transposeForScores(mixedQueryLayer)
-            let keyLayer = transposeForScores(mixedKeyLayer)
-            let valueLayer = transposeForScores(mixedValueLayer)
+            let queryLayer = transposeForScores(queries)
+            let keyLayer = transposeForScores(keys)
+            let valueLayer = transposeForScores(values)
 
             var attentionScores = queryLayer.matmul(keyLayer.transposed(permutation: 0, 1, 3, 2))
             attentionScores = attentionScores / sqrt(Float(attentionHeadSize))
             if let attentionMask {
                 attentionScores = attentionScores + attentionMask
             }
-            let attentionProbs = attentionScores.softmax(alongAxis: -1)
+            var attentionProbs = attentionScores.softmax(alongAxis: -1)
+            if let headMask {
+                attentionProbs = attentionProbs * headMask
+            }
             var contextLayer = attentionProbs.matmul(valueLayer)
-            contextLayer = contextLayer.transposed(permutation: [0, 2, 1, 3])
+            contextLayer = contextLayer.transposed(permutation: 0, 2, 1, 3)
             let newContextLayerShape = contextLayer.shape.dropLast(2) + [allHeadSize]
             return contextLayer.reshaped(to: Array(newContextLayerShape))
         }
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct Attention: Sendable {
-        let selfAttention: Bert.SelfAttention
-        let output: Bert.SelfOutput
+        let selfAttention: XLMRoberta.SelfAttention
+        let output: XLMRoberta.SelfOutput
 
         public init(
-            selfAttention: Bert.SelfAttention,
-            output: Bert.SelfOutput
+            selfAttention: XLMRoberta.SelfAttention,
+            output: XLMRoberta.SelfOutput
         ) {
             self.selfAttention = selfAttention
             self.output = output
@@ -247,11 +248,13 @@ extension Bert {
 
         public func callAsFunction(
             hiddenStates: MLTensor,
-            attentionMask: MLTensor?
+            attentionMask: MLTensor?,
+            headMask: MLTensor?
         ) -> MLTensor {
             let selfOutputs = selfAttention(
                 hiddenStates: hiddenStates,
-                attentionMask: attentionMask
+                attentionMask: attentionMask,
+                headMask: headMask
             )
             return output(
                 hiddenStates: selfOutputs,
@@ -261,16 +264,39 @@ extension Bert {
     }
 }
 
-extension Bert {
-    public struct Layer: Sendable {
-        let attention: Bert.Attention
-        let intermediate: Bert.Intermediate
-        let output: Bert.Output
+extension XLMRoberta {
+    public struct Output: Sendable {
+        let dense: MLTensorUtils.Layer
+        let layerNorm: MLTensorUtils.Layer
 
         public init(
-            attention: Bert.Attention,
-            intermediate: Bert.Intermediate,
-            output: Bert.Output
+            dense: @escaping MLTensorUtils.Layer,
+            layerNorm: @escaping MLTensorUtils.Layer
+        ) {
+            self.dense = dense
+            self.layerNorm = layerNorm
+        }
+
+        public func callAsFunction(
+            hiddenStates: MLTensor,
+            inputTensor: MLTensor
+        ) -> MLTensor {
+            let hiddenStates = dense(hiddenStates)
+            return layerNorm(hiddenStates + inputTensor)
+        }
+    }
+}
+
+extension XLMRoberta {
+    public struct Layer: Sendable {
+        let attention: XLMRoberta.Attention
+        let intermediate: XLMRoberta.Intermediate
+        let output: XLMRoberta.Output
+
+        public init(
+            attention: XLMRoberta.Attention,
+            intermediate: XLMRoberta.Intermediate,
+            output: XLMRoberta.Output
         ) {
             self.attention = attention
             self.intermediate = intermediate
@@ -279,11 +305,13 @@ extension Bert {
 
         public func callAsFunction(
             hiddenStates: MLTensor,
-            attentionMask: MLTensor?
+            attentionMask: MLTensor?,
+            headMask: MLTensor?
         ) -> MLTensor {
             let attentionOutput = attention(
                 hiddenStates: hiddenStates,
-                attentionMask: attentionMask
+                attentionMask: attentionMask,
+                headMask: headMask
             )
             let intermediateOutput = intermediate(
                 hiddenStates: attentionOutput
@@ -296,23 +324,31 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct Encoder: Sendable {
-        let layers: [Bert.Layer]
+        let layers: [XLMRoberta.Layer]
 
-        public init(layers: [Bert.Layer]) {
+        public init(layers: [XLMRoberta.Layer]) {
             self.layers = layers
         }
 
         public func callAsFunction(
             hiddenStates: MLTensor,
-            attentionMask: MLTensor?
+            attentionMask: MLTensor?,
+            headMask: MLTensor?
         ) -> MLTensor {
             var hiddenStates = hiddenStates
-            for layer in layers {
+            for (index, layer) in layers.enumerated() {
+                let layerHeadMask: MLTensor? =
+                    if let headMask {
+                        headMask[index]
+                    } else {
+                        nil
+                    }
                 hiddenStates = layer(
                     hiddenStates: hiddenStates,
-                    attentionMask: attentionMask
+                    attentionMask: attentionMask,
+                    headMask: layerHeadMask
                 )
             }
             return hiddenStates
@@ -320,58 +356,92 @@ extension Bert {
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct Model: Sendable {
-        let embeddings: Bert.Embeddings
-        let encoder: Bert.Encoder
-        let pooler: Bert.Pooler
+        let embeddings: XLMRoberta.Embeddings
+        let encoder: XLMRoberta.Encoder
+        let pooler: XLMRoberta.Pooler?
+        let numHiddenLayers: Int
 
         public init(
-            embeddings: Bert.Embeddings,
-            encoder: Bert.Encoder,
-            pooler: Bert.Pooler
+            embeddings: XLMRoberta.Embeddings,
+            encoder: XLMRoberta.Encoder,
+            pooler: XLMRoberta.Pooler?,
+            numHiddenLayers: Int
         ) {
             self.embeddings = embeddings
             self.encoder = encoder
             self.pooler = pooler
+            self.numHiddenLayers = numHiddenLayers
+        }
+
+        private func extendedAttentionMask(_ attentionMask: MLTensor) -> MLTensor {
+            let attentionMask: MLTensor =
+                if attentionMask.rank == 3 {
+                    attentionMask.expandingShape(at: 1)
+                } else if attentionMask.rank == 2 {
+                    attentionMask.expandingShape(at: 1, 1)
+                } else {
+                    fatalError("Wrong shape for attentionMask (shape \(attentionMask.shape))")
+                }
+            return (1.0 - attentionMask) * -10000.0
         }
 
         public func callAsFunction(
             inputIds: MLTensor,
             tokenTypeIds: MLTensor? = nil,
-            attentionMask: MLTensor? = nil
-        ) -> (sequenceOutput: MLTensor, pooledOutput: MLTensor) {
-            let embeddingOutput = embeddings(inputIds: inputIds, tokenTypeIds: tokenTypeIds)
-            let mask: MLTensor? =
-                if let attentionMask {
-                    (1.0 - attentionMask.expandingShape(at: 1, 1)) * -10000.0
+            attentionMask: MLTensor? = nil,
+            positionIds: MLTensor? = nil
+        ) -> (sequenceOutput: MLTensor, pooledOutput: MLTensor?) {
+            let attentionMask =
+                attentionMask
+                ?? MLTensor(
+                    ones: inputIds.shape,
+                    scalarType: Float32.self
+                )
+            let tokenTypeIds =
+                tokenTypeIds
+                ?? MLTensor(
+                    zeros: inputIds.shape,
+                    scalarType: Int32.self
+                )
+            let headMask = MLTensor(
+                repeating: 1 as Int32, shape: [numHiddenLayers])
+            let embeddingOutput = embeddings(
+                inputIds: inputIds,
+                tokenTypeIds: tokenTypeIds,
+                positionIds: positionIds
+            )
+            let encoderOutput = encoder(
+                hiddenStates: embeddingOutput,
+                attentionMask: extendedAttentionMask(attentionMask),
+                headMask: headMask
+            )
+            let pooledOutput: MLTensor? =
+                if let pooler {
+                    pooler(hiddenStates: encoderOutput)
                 } else {
                     nil
                 }
-            let encoderOutput = encoder(hiddenStates: embeddingOutput, attentionMask: mask)
-            let pooledOutput = pooler(encoderOutput)
             return (encoderOutput, pooledOutput)
         }
     }
 }
 
-extension Bert {
+extension XLMRoberta {
     public struct ModelBundle: Sendable {
-        public let model: Bert.Model
+        public let model: XLMRoberta.Model
         public let tokenizer: any TextTokenizer
 
         public init(
-            model: Bert.Model,
+            model: XLMRoberta.Model,
             tokenizer: any TextTokenizer
         ) {
             self.model = model
             self.tokenizer = tokenizer
         }
 
-        public func encode(
-            _ text: String,
-            maxLength: Int = 512
-        ) throws -> MLTensor {
+        public func encode(_ text: String, maxLength: Int = 128) throws -> MLTensor {
             let tokens = try tokenizer.tokenizeText(text, maxLength: maxLength)
             let inputIds = MLTensor(shape: [1, tokens.count], scalars: tokens)
             let result = model(inputIds: inputIds)
@@ -381,7 +451,7 @@ extension Bert {
         public func batchEncode(
             _ texts: [String],
             padTokenId: Int = 0,
-            maxLength: Int = 512
+            maxLength: Int = 128
         ) throws -> MLTensor {
             let encodedTexts = try tokenizer.tokenizeTextsPaddingToLongest(
                 texts, padTokenId: padTokenId, maxLength: maxLength)

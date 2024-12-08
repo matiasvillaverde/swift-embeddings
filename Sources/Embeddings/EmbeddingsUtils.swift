@@ -16,10 +16,15 @@ func downloadModelFromHub(
             "*.safetensors",
             "*.py",
             "tokenizer.model",
+            "sentencepiece*.model",
             "*.tiktoken",
             "*.txt",
         ]
     )
+}
+
+enum EmbeddingsError: Error {
+    case fileNotFound
 }
 
 func loadConfigFromFile<Config: Codable>(at url: URL) throws -> Config {

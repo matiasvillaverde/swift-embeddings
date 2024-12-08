@@ -31,7 +31,7 @@ final class ClipTokenizer: Sendable {
         self.cache = Mutex([:])
     }
 
-    func tokenize(_ text: String, maxLength: Int = 77, padToLength: Int? = nil) -> [Int] {
+    func tokenize(_ text: String, maxLength: Int, padToLength: Int? = nil) -> [Int] {
         precondition(
             maxLength >= 2, "maxLength must be at least 2 to accommodate BOS and EOS tokens")
         let cleanText = text.lowercased().replacing(emptyStringPattern, with: " ")
@@ -93,6 +93,12 @@ final class ClipTokenizer: Sendable {
             $0[text] = unigrams
         }
         return unigrams
+    }
+}
+
+extension ClipTokenizer: TextTokenizer {
+    func tokenizeText(_ text: String, maxLength: Int) throws -> [Int32] {
+        tokenize(text, maxLength: maxLength, padToLength: nil).map { Int32($0) }
     }
 }
 

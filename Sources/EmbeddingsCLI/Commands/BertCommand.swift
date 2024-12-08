@@ -13,7 +13,7 @@ struct BertCommand: AsyncParsableCommand {
 
     func run() async throws {
         let modelBundle = try await Bert.loadModelBundle(from: modelId)
-        let encoded = modelBundle.encode(text, maxLength: maxLength)
+        let encoded = try modelBundle.encode(text, maxLength: maxLength)
         let result = await encoded.cast(to: Float.self).shapedArray(of: Float.self).scalars
         print(result)
     }

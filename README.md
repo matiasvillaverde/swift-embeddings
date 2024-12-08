@@ -16,6 +16,13 @@ Some of the supported models on `Hugging Face`:
 - [sentence-transformers/msmarco-bert-base-dot-v5](https://huggingface.co/sentence-transformers/msmarco-bert-base-dot-v5)
 - [thenlper/gte-base](https://huggingface.co/thenlper/gte-base)
 
+### XLM-RoBERTa (Cross-lingual Language Model - Robustly Optimized BERT Approach)
+
+Some of the supported models on `Hugging Face`:
+
+- [sentence-transformers/paraphrase-multilingual-mpnet-base-v2](https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2)
+- [tomaarsen/xlm-roberta-base-multilingual-en-ar-fr-de-es-tr-it](https://huggingface.co/tomaarsen/xlm-roberta-base-multilingual-en-ar-fr-de-es-tr-it)
+
 ### CLIP (Contrastive Language–Image Pre-training)
 
 NOTE: only text encoding is supported for now.
@@ -31,7 +38,7 @@ Add the following to your `Package.swift` file. In the package dependencies add:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.4")
+    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.5")
 ]
 ```
 
@@ -85,37 +92,26 @@ print(result)
 
 ## Command Line Demo
 
-### BERT
-
-To run the `BERT` command line demo, use the following command:
+To run the command line demo, use the following command:
 
 ```bash
-swift run embeddings-cli bert [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
+swift run embeddings-cli <subcommand> [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
+```
+
+Subcommands:
+
+```bash
+bert                    Encode text using BERT model
+clip                    Encode text using CLIP model
+xlm-roberta             Encode text using XLMRoberta model
 ```
 
 Command line options:
 
 ```bash
---model-id <model-id>                       (default: sentence-transformers/all-MiniLM-L6-v2)
---text <text>                               (default: a photo of a dog)
---max-length <max-length>                   (default: 512)
--h, --help                                  Show help information.
-```
-
-### CLIP
-
-To run the `CLIP` command line demo, use the following command:
-
-```bash
-swift run embeddings-cli clip [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
-```
-
-Command line options:
-
-```bash
---model-id <model-id>                       (default: jkrukowski/clip-vit-base-patch16)
---text <text>                               (default: a photo of a dog)
---max-length <max-length>                   (default: 77)
+--model-id <model-id>                       Id of the model to use
+--text <text>                               Text to encode
+--max-length <max-length>                   Maximum length of the input
 -h, --help                                  Show help information.
 ```
 

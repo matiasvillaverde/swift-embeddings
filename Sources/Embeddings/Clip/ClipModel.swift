@@ -281,8 +281,8 @@ extension Clip {
             self.tokenizer = tokenizer
         }
 
-        public func encode(_ text: String, maxLength: Int = 77) -> MLTensor {
-            let tokens = tokenizer.tokenize(text, maxLength: maxLength)
+        public func encode(_ text: String, maxLength: Int = 77) throws -> MLTensor {
+            let tokens = try tokenizer.tokenizeText(text, maxLength: maxLength)
             let inputIds = MLTensor(shape: [1, tokens.count], scalars: tokens)
             let modelOutput = textModel(inputIds: inputIds)
             let textEmbeddings = textModel.textProjection(modelOutput.poolerOutput)
@@ -293,8 +293,8 @@ extension Clip {
             _ texts: [String],
             padTokenId: Int = 0,
             maxLength: Int = 77
-        ) -> MLTensor {
-            let encodedTexts = tokenizer.tokenizePaddingToLongest(
+        ) throws -> MLTensor {
+            let encodedTexts = try tokenizer.tokenizeTextsPaddingToLongest(
                 texts, padTokenId: padTokenId, maxLength: maxLength)
             let inputIds = MLTensor(
                 shape: [encodedTexts.count, encodedTexts[0].count],

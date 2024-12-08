@@ -16,18 +16,22 @@ extension Clip {
         downloadBase: URL? = nil,
         useBackgroundSession: Bool = false
     ) async throws -> Clip.ModelBundle {
-        let modelUrl = try await downloadModelFromHub(
+        let modelFolder = try await downloadModelFromHub(
             from: hubRepoId,
             downloadBase: downloadBase,
             useBackgroundSession: useBackgroundSession
         )
-        let tokenizer = try loadClipTokenizer(at: modelUrl)
-        let weightsUrl = modelUrl.appendingPathComponent("model.safetensors")
-        let configUrl = modelUrl.appendingPathComponent("config.json")
+        return try await loadModelBundle(from: modelFolder)
+    }
+
+    public static func loadModelBundle(from modelFolder: URL) async throws -> Clip.ModelBundle {
+        let tokenizer = try loadClipTokenizer(at: modelFolder)
+        let weightsUrl = modelFolder.appendingPathComponent("model.safetensors")
+        let configUrl = modelFolder.appendingPathComponent("config.json")
         let config = try Clip.loadConfig(at: configUrl)
         // TODO: implement vision model loading
         let textModel = try Clip.loadModel(weightsUrl: weightsUrl, config: config)
-        return Clip.ModelBundle(textModel: textModel, tokenizer: TextTokenizerType.clip(tokenizer))
+        return Clip.ModelBundle(textModel: textModel, tokenizer: tokenizer)
     }
 }
 

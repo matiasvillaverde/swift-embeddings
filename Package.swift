@@ -40,6 +40,10 @@ let package = Package(
             url: "https://github.com/apple/swift-argument-parser.git",
             from: "1.5.0"
         ),
+        .package(
+            url: "https://github.com/jkrukowski/swift-sentencepiece",
+            from: "0.0.5"
+        ),
     ],
     targets: [
         .executableTarget(
@@ -57,6 +61,7 @@ let package = Package(
                 "MLTensorUtils",
                 .product(name: "Safetensors", package: "swift-safetensors"),
                 .product(name: "Transformers", package: "swift-transformers"),
+                .product(name: "SentencepieceTokenizer", package: "swift-sentencepiece"),
             ]
         ),
         .target(

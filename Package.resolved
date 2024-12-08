@@ -1,5 +1,5 @@
 {
-  "originHash" : "5501a395135de94e2c743aa6ee8e034ae6347e2a5c1f556d0c0e028bfceb9b7c",
+  "originHash" : "3173defd78a48faa60b1c56cfa74f15c0c2b63eee978ea01ea5eb21e0b8e5939",
   "pins" : [
     {
       "identity" : "jinja",
@@ -35,6 +35,15 @@
       "state" : {
         "revision" : "f730309020d5b53e137b30bc10eb1d168954e1e7",
         "version" : "0.0.6"
+      }
+    },
+    {
+      "identity" : "swift-sentencepiece",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jkrukowski/swift-sentencepiece",
+      "state" : {
+        "revision" : "75d725019ff0b75fbbd7128314fe6710c5a86df0",
+        "version" : "0.0.5"
       }
     },
     {
