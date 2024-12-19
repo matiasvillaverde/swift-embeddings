@@ -5,7 +5,7 @@ import Testing
 
 @Test func clipTokenizer() throws {
     let bundleUrl = Bundle.module
-        .url(forResource: "merges", withExtension: "txt")?
+        .url(forResource: "merges", withExtension: "txt", subdirectory: "Resources")?
         .deletingLastPathComponent()
     let url = try #require(bundleUrl, "Wrong bundle URL")
     let tokenizer = try loadClipTokenizer(at: url)
