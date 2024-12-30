@@ -3,7 +3,6 @@ import Foundation
 import Hub
 import MLTensorUtils
 import Safetensors
-import SentencepieceTokenizer
 @preconcurrency import Tokenizers
 
 extension XLMRoberta {

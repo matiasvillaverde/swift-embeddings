@@ -32,13 +32,24 @@ Some of the supported models on `Hugging Face`:
 - [jkrukowski/clip-vit-base-patch32](https://huggingface.co/jkrukowski/clip-vit-base-patch32)
 - [jkrukowski/clip-vit-large-patch14](https://huggingface.co/jkrukowski/clip-vit-large-patch14)
 
+### Word2Vec
+
+NOTE: it's a word embedding model. It loads and keeps the whole model in memory.
+For the more memory efficient solution, you might want to use [SQLiteVec](https://github.com/jkrukowski/SQLiteVec).
+Some of the supported models on `Hugging Face`:
+
+- [jkrukowski/glove-twitter-25](https://huggingface.co/jkrukowski/glove-twitter-25)
+- [jkrukowski/glove-twitter-50](https://huggingface.co/jkrukowski/glove-twitter-50)
+- [jkrukowski/glove-twitter-100](https://huggingface.co/jkrukowski/glove-twitter-100)
+- [jkrukowski/glove-twitter-200](https://huggingface.co/jkrukowski/glove-twitter-200)
+
 ## Installation
 
 Add the following to your `Package.swift` file. In the package dependencies add:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.5")
+    .package(url: "https://github.com/jkrukowski/swift-embeddings", from: "0.0.7")
 ]
 ```
 
@@ -95,7 +106,7 @@ print(result)
 To run the command line demo, use the following command:
 
 ```bash
-swift run embeddings-cli <subcommand> [--model-id <model-id>] [--text <text>] [--max-length <max-length>]
+swift run embeddings-cli <subcommand> [--model-id <model-id>] [--model-file <model-file>] [--text <text>] [--max-length <max-length>]
 ```
 
 Subcommands:
@@ -104,14 +115,16 @@ Subcommands:
 bert                    Encode text using BERT model
 clip                    Encode text using CLIP model
 xlm-roberta             Encode text using XLMRoberta model
+word2vec                Encode word using Word2Vec model
 ```
 
 Command line options:
 
 ```bash
 --model-id <model-id>                       Id of the model to use
+--model-file <model-file>                   Path to the model file (only for `Word2Vec`)
 --text <text>                               Text to encode
---max-length <max-length>                   Maximum length of the input
+--max-length <max-length>                   Maximum length of the input (not for `Word2Vec`)
 -h, --help                                  Show help information.
 ```
 

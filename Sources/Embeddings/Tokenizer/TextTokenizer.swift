@@ -1,5 +1,4 @@
 import Foundation
-import SentencepieceTokenizer
 @preconcurrency import Tokenizers
 
 public protocol TextTokenizer: Sendable {
