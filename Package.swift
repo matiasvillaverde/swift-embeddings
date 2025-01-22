@@ -34,7 +34,7 @@ let package = Package(
         ),
         .package(
             url: "https://github.com/jkrukowski/swift-safetensors.git",
-            from: "0.0.6"
+            from: "0.0.7"
         ),
         .package(
             url: "https://github.com/apple/swift-argument-parser.git",
@@ -43,6 +43,10 @@ let package = Package(
         .package(
             url: "https://github.com/jkrukowski/swift-sentencepiece",
             from: "0.0.5"
+        ),
+        .package(
+            url: "https://github.com/tuist/Command.git",
+            from: "0.11.16"
         ),
     ],
     targets: [
@@ -82,6 +86,17 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources")
+            ]
+        ),
+        .testTarget(
+            name: "AccuracyTests",
+            dependencies: [
+                "Embeddings",
+                "TestingUtils",
+                .product(name: "Command", package: "Command"),
+            ],
+            resources: [
+                .copy("Scripts")
             ]
         ),
         .testTarget(

@@ -39,3 +39,10 @@ func loadConfigFromFile<Config: Codable>(at url: URL) throws -> Config {
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     return try decoder.decode(Config.self, from: configData)
 }
+
+extension String {
+    func replace(suffix: String, with string: String) -> String {
+        guard hasSuffix(suffix) else { return self }
+        return String(dropLast(suffix.count) + string)
+    }
+}

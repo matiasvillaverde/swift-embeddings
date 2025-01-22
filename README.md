@@ -15,6 +15,13 @@ Some of the supported models on `Hugging Face`:
 - [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - [sentence-transformers/msmarco-bert-base-dot-v5](https://huggingface.co/sentence-transformers/msmarco-bert-base-dot-v5)
 - [thenlper/gte-base](https://huggingface.co/thenlper/gte-base)
+- [google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)
+
+NOTE: `google-bert/bert-base-uncased` is supported but `weightKeyTransform` must be provided:
+
+```swift
+let modelBundle = try await Bert.loadModelBundle(from: modelId, weightKeyTransform: Bert.googleWeightsKeyTransform)
+```
 
 ### XLM-RoBERTa (Cross-lingual Language Model - Robustly Optimized BERT Approach)
 

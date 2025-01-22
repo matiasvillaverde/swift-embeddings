@@ -22,14 +22,26 @@ extension MLTensor {
     }
 }
 
-package func allClose<T: Numeric>(_ lhs: [T], _ rhs: [T]) -> Bool where T.Magnitude: FloatingPoint {
+package func allClose<T: Numeric>(
+    _ lhs: [T],
+    _ rhs: [T],
+    absoluteTolerance: T.Magnitude = T.Magnitude.ulpOfOne.squareRoot()
+        * T.Magnitude.leastNormalMagnitude,
+    relativeTolerance: T.Magnitude = T.Magnitude.ulpOfOne.squareRoot()
+) -> Bool where T.Magnitude: FloatingPoint {
     guard lhs.count == rhs.count else {
-        Issue.record("Expected \(lhs) to be approximately equal to \(rhs)")
+        Issue.record("Expected \(lhs) to be approximately equal to \(rhs), but sizes differ")
         return false
     }
     for (l, r) in zip(lhs, rhs) {
-        guard l.isApproximatelyEqual(to: r) else {
-            Issue.record("Expected \(lhs) to be approximately equal to \(rhs)")
+        guard
+            l.isApproximatelyEqual(
+                to: r,
+                absoluteTolerance: absoluteTolerance,
+                relativeTolerance: relativeTolerance
+            )
+        else {
+            Issue.record("Expected \(lhs) to be approximately equal to \(rhs), but \(l) != \(r)")
             return false
         }
     }
