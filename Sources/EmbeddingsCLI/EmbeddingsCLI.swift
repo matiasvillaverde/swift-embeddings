@@ -8,6 +8,7 @@ struct EmbeddingsCLI: AsyncParsableCommand {
         subcommands: [
             BertCommand.self,
             ClipCommand.self,
+            Model2VecCommand.self,
             XLMRobertaCommand.self,
             Word2VecCommand.self,
         ]

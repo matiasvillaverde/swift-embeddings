@@ -46,3 +46,19 @@ extension String {
         return String(dropLast(suffix.count) + string)
     }
 }
+
+public struct LoadConfig {
+    public let modelFileName: String
+    public let configFileName: String
+    public let weightKeyTransform: ((String) -> String)
+
+    public init(
+        modelFileName: String = "model.safetensors",
+        configFileName: String = "config.json",
+        weightKeyTransform: @escaping ((String) -> String) = { $0 }
+    ) {
+        self.modelFileName = modelFileName
+        self.configFileName = configFileName
+        self.weightKeyTransform = weightKeyTransform
+    }
+}

@@ -4,14 +4,16 @@ import Synchronization
 extension Regex: @retroactive @unchecked Sendable {}
 
 final class ClipTokenizer: Sendable {
+    let bos: String
+    let bosToken: Int
+    let eos: String
+    let eosToken: Int
+    let unk: String
+    let unkToken: Int
     private let bpeRanks: [Pair<String>: Int]
     private let vocab: [String: Int]
     private let splitStringPattern: Regex<AnyRegexOutput>
     private let emptyStringPattern: Regex<AnyRegexOutput>
-    private let bos: String
-    private let bosToken: Int
-    private let eos: String
-    private let eosToken: Int
     private let cache: Mutex<[String: [String]]>
 
     init(
@@ -28,25 +30,50 @@ final class ClipTokenizer: Sendable {
         self.bosToken = vocab[bos]!
         self.eos = "<|endoftext|>"
         self.eosToken = vocab[eos]!
+        self.unk = "<|endoftext|>"
+        self.unkToken = vocab[unk]!
         self.cache = Mutex([:])
     }
 
-    func tokenize(_ text: String, maxLength: Int, padToLength: Int? = nil) -> [Int] {
-        precondition(
-            maxLength >= 2, "maxLength must be at least 2 to accommodate BOS and EOS tokens")
+    func tokenize(
+        _ text: String,
+        maxLength: Int?,
+        padToLength: Int? = nil,
+        addSpecialTokens: Bool
+    ) -> [Int] {
         let cleanText = text.lowercased().replacing(emptyStringPattern, with: " ")
         let tokens = cleanText.ranges(of: splitStringPattern).map { String(cleanText[$0]) }
         let bpeTokens = tokens.flatMap { bpe($0) }
         let tokenIds = bpeTokens.map { vocab[$0]! }
-        var result = [bosToken]
-        // Truncate to maxLength - 2 to make space for bos and eos tokens
-        result.append(contentsOf: tokenIds.prefix(maxLength - 2))
-        result.append(eosToken)
+        var result = addSpecialTokens ? [bosToken] : []
+        if let maxLength {
+            if addSpecialTokens {
+                precondition(
+                    maxLength >= 2, "maxLength must be at least 2 to accommodate BOS and EOS tokens"
+                )
+                // Truncate to maxLength - 2 to make space for bos and eos tokens
+                result.append(contentsOf: tokenIds.prefix(maxLength - 2))
+            } else {
+                result.append(contentsOf: tokenIds.prefix(maxLength))
+            }
+        } else {
+            result.append(contentsOf: tokenIds)
+        }
+        if addSpecialTokens {
+            result.append(eosToken)
+        }
         // If padToLength is provided, pad the tokenIds with 0s
-        if let padToLength, padToLength <= maxLength {
+        if let padToLength {
             precondition(padToLength - 2 >= 0, "padToLength must be greater than or equal to 2")
-            result.append(
-                contentsOf: Array(repeating: 0, count: padToLength - result.count))
+            if let maxLength {
+                if padToLength <= maxLength {
+                    result.append(
+                        contentsOf: Array(repeating: 0, count: padToLength - result.count))
+                }
+            } else {
+                result.append(
+                    contentsOf: Array(repeating: 0, count: padToLength - result.count))
+            }
         }
         return result
     }
@@ -97,8 +124,21 @@ final class ClipTokenizer: Sendable {
 }
 
 extension ClipTokenizer: TextTokenizer {
-    func tokenizeText(_ text: String, maxLength: Int) throws -> [Int32] {
-        tokenize(text, maxLength: maxLength, padToLength: nil).map { Int32($0) }
+    var unknownTokenId: Int? {
+        unkToken
+    }
+
+    func tokenizeText(
+        _ text: String,
+        maxLength: Int?,
+        addSpecialTokens: Bool
+    ) throws -> [Int32] {
+        tokenize(
+            text,
+            maxLength: maxLength,
+            padToLength: nil,
+            addSpecialTokens: addSpecialTokens
+        ).map { Int32($0) }
     }
 }
 

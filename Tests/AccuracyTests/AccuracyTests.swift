@@ -22,19 +22,14 @@ import TestingUtils
 func generateUsingTransformers(
     modelPath: String,
     text: String,
-    isClip: Bool = false
+    modelType: ModelType
 ) async throws -> [Float] {
     let scriptUrl = try #require(
         Bundle.module.path(forResource: "generate", ofType: "py", inDirectory: "Scripts"),
         "Script not found"
     )
     let uvPath = try #require(ProcessInfo.processInfo.environment["UV_PATH"], "UV_PATH not found")
-    let arguments: [String] =
-        if isClip {
-            [uvPath, "run", scriptUrl, modelPath, text, "--isclip"]
-        } else {
-            [uvPath, "run", scriptUrl, modelPath, text]
-        }
+    let arguments = [uvPath, "run", scriptUrl, modelPath, text, modelType.rawValue]
     let result =
         try await Command
         .run(arguments: arguments)
@@ -53,6 +48,13 @@ func modelPath(modelId: String, cacheDirectory: URL) -> String {
         .path()
 }
 
+enum ModelType: String {
+    case bert
+    case clip
+    case model2Vec = "model2vec"
+    case xlmRoberta = "xlm-roberta"
+}
+
 @Suite struct AccuracyTests {
     let cacheDirectory = FileManager.default.temporaryDirectory
 
@@ -66,14 +68,15 @@ func modelPath(modelId: String, cacheDirectory: URL) -> String {
         let modelBundle = try await Bert.loadModelBundle(
             from: modelId,
             downloadBase: cacheDirectory,
-            weightKeyTransform: Bert.googleWeightsKeyTransform
+            loadConfig: LoadConfig(weightKeyTransform: Bert.googleWeightsKeyTransform)
         )
         let encoded = try modelBundle.encode(text)
         let swiftData = await encoded.cast(to: Float.self).scalars(of: Float.self)
         let modelPath = modelPath(modelId: modelId, cacheDirectory: cacheDirectory)
         let pythonData = try await generateUsingTransformers(
             modelPath: modelPath,
-            text: text
+            text: text,
+            modelType: .bert
         )
 
         #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)
@@ -102,7 +105,7 @@ func modelPath(modelId: String, cacheDirectory: URL) -> String {
         let pythonData = try await generateUsingTransformers(
             modelPath: modelPath,
             text: text,
-            isClip: true
+            modelType: .clip
         )
 
         #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)
@@ -124,7 +127,31 @@ func modelPath(modelId: String, cacheDirectory: URL) -> String {
         let modelPath = modelPath(modelId: modelId, cacheDirectory: cacheDirectory)
         let pythonData = try await generateUsingTransformers(
             modelPath: modelPath,
-            text: text
+            text: text,
+            modelType: .xlmRoberta
+        )
+
+        #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)
+    }
+
+    @Test(
+        "Model2Vec Accuracy",
+        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil)
+    )
+    func model2VecAccuracy() async throws {
+        let text = "Text to encode"
+        let modelId = "minishlab/potion-base-2M"
+        let modelBundle = try await Model2Vec.loadModelBundle(
+            from: modelId,
+            downloadBase: cacheDirectory
+        )
+        let encoded = try modelBundle.encode(text)
+        let swiftData = await encoded.cast(to: Float.self).scalars(of: Float.self)
+        let modelPath = modelPath(modelId: modelId, cacheDirectory: cacheDirectory)
+        let pythonData = try await generateUsingTransformers(
+            modelPath: modelPath,
+            text: text,
+            modelType: .model2Vec
         )
 
         #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)

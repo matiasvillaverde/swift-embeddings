@@ -17,10 +17,13 @@ Some of the supported models on `Hugging Face`:
 - [thenlper/gte-base](https://huggingface.co/thenlper/gte-base)
 - [google-bert/bert-base-uncased](https://huggingface.co/google-bert/bert-base-uncased)
 
-NOTE: `google-bert/bert-base-uncased` is supported but `weightKeyTransform` must be provided:
+NOTE: `google-bert/bert-base-uncased` is supported but `weightKeyTransform` must be provided in the `LoadConfig`:
 
 ```swift
-let modelBundle = try await Bert.loadModelBundle(from: modelId, weightKeyTransform: Bert.googleWeightsKeyTransform)
+let modelBundle = try await Bert.loadModelBundle(
+    from: "google-bert/bert-base-uncased",
+    loadConfig: LoadConfig(weightKeyTransform: Bert.googleWeightsKeyTransform)
+)
 ```
 
 ### XLM-RoBERTa (Cross-lingual Language Model - Robustly Optimized BERT Approach)
@@ -49,6 +52,15 @@ Some of the supported models on `Hugging Face`:
 - [jkrukowski/glove-twitter-50](https://huggingface.co/jkrukowski/glove-twitter-50)
 - [jkrukowski/glove-twitter-100](https://huggingface.co/jkrukowski/glove-twitter-100)
 - [jkrukowski/glove-twitter-200](https://huggingface.co/jkrukowski/glove-twitter-200)
+
+### Model2Vec
+
+Some of the supported models on `Hugging Face`:
+
+- [minishlab/potion-base-2M](https://huggingface.co/minishlab/potion-base-2M)
+- [minishlab/potion-base-4M](https://huggingface.co/minishlab/potion-base-4M)
+- [minishlab/potion-base-8M](https://huggingface.co/minishlab/potion-base-8M)
+- [minishlab/M2V_base_output](https://huggingface.co/minishlab/M2V_base_output)
 
 ## Installation
 

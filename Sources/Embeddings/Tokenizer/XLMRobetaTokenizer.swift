@@ -13,21 +13,44 @@ final class XLMRobetaTokenizer: Sendable {
         self.addedTokens = addedTokens
     }
 
-    func tokenize(_ text: String, maxLength: Int, padToLength: Int? = nil) throws -> [Int] {
-        precondition(
-            maxLength >= 2, "maxLength must be at least 2 to accommodate BOS and EOS tokens")
+    func tokenize(
+        _ text: String,
+        maxLength: Int?,
+        padToLength: Int? = nil,
+        addSpecialTokens: Bool
+    ) throws -> [Int] {
         let tokenIds = try tokenizer.withLock {
             try $0.encode(text)
         }
-        var result = [bosTokenId]
-        // Truncate to maxLength - 2 to make space for bos and eos tokens
-        result.append(contentsOf: tokenIds.prefix(maxLength - 2))
-        result.append(eosTokenId)
+        var result = addSpecialTokens ? [bosTokenId] : []
+        if let maxLength {
+            if addSpecialTokens {
+                precondition(
+                    maxLength >= 2, "maxLength must be at least 2 to accommodate BOS and EOS tokens"
+                )
+                // Truncate to maxLength - 2 to make space for bos and eos tokens
+                result.append(contentsOf: tokenIds.prefix(maxLength - 2))
+            } else {
+                result.append(contentsOf: tokenIds.prefix(maxLength))
+            }
+        } else {
+            result.append(contentsOf: tokenIds)
+        }
+        if addSpecialTokens {
+            result.append(eosTokenId)
+        }
         // If padToLength is provided, pad the tokenIds with padTokenId
-        if let padToLength, padToLength <= maxLength {
+        if let padToLength {
             precondition(padToLength - 2 >= 0, "padToLength must be greater than or equal to 2")
-            result.append(
-                contentsOf: Array(repeating: padTokenId, count: padToLength - result.count))
+            if let maxLength {
+                if padToLength <= maxLength {
+                    result.append(
+                        contentsOf: Array(repeating: 0, count: padToLength - result.count))
+                }
+            } else {
+                result.append(
+                    contentsOf: Array(repeating: 0, count: padToLength - result.count))
+            }
         }
         return result
     }
@@ -70,7 +93,20 @@ final class XLMRobetaTokenizer: Sendable {
 }
 
 extension XLMRobetaTokenizer: TextTokenizer {
-    func tokenizeText(_ text: String, maxLength: Int) throws -> [Int32] {
-        try tokenize(text, maxLength: maxLength, padToLength: nil).map { Int32($0) }
+    var unknownTokenId: Int? {
+        unkTokenId
+    }
+
+    func tokenizeText(
+        _ text: String,
+        maxLength: Int?,
+        addSpecialTokens: Bool
+    ) throws -> [Int32] {
+        try tokenize(
+            text,
+            maxLength: maxLength,
+            padToLength: nil,
+            addSpecialTokens: addSpecialTokens
+        ).map { Int32($0) }
     }
 }

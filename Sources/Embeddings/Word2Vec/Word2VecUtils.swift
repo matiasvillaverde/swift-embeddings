@@ -6,21 +6,23 @@ import MLTensorUtils
 extension Word2Vec {
     public static func loadModelBundle(
         from hubRepoId: String,
-        modelFileName: String,
         downloadBase: URL? = nil,
-        useBackgroundSession: Bool = false
+        useBackgroundSession: Bool = false,
+        loadConfig: LoadConfig = LoadConfig()
     ) async throws -> Word2Vec.ModelBundle {
         let modelFolder = try await downloadModelFromHub(
             from: hubRepoId,
             downloadBase: downloadBase,
             useBackgroundSession: useBackgroundSession,
-            globs: [modelFileName]
+            globs: [loadConfig.modelFileName]
         )
-        let modelFile = modelFolder.appendingPathComponent(modelFileName)
+        let modelFile = modelFolder.appendingPathComponent(loadConfig.modelFileName)
         return try await loadModelBundle(from: modelFile)
     }
 
-    public static func loadModelBundle(from modelFile: URL) async throws -> Word2Vec.ModelBundle {
+    public static func loadModelBundle(
+        from modelFile: URL
+    ) async throws -> Word2Vec.ModelBundle {
         let data = try Data(contentsOf: modelFile, options: .mappedIfSafe)
         let lines = String(decoding: data, as: UTF8.self).components(separatedBy: .newlines)
         var lineCount: Int?

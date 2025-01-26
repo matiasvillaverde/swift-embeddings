@@ -13,7 +13,9 @@ struct Word2VecCommand: AsyncParsableCommand {
 
     func run() async throws {
         let modelBundle = try await Word2Vec.loadModelBundle(
-            from: modelId, modelFileName: modelFile)
+            from: modelId,
+            loadConfig: LoadConfig(modelFileName: modelFile)
+        )
         guard let encoded = modelBundle.encode(word) else {
             print("Word '\(word)' not found")
             return
