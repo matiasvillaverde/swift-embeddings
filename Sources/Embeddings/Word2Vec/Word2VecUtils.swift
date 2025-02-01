@@ -15,9 +15,9 @@ extension Word2Vec {
             from: hubRepoId,
             downloadBase: downloadBase,
             useBackgroundSession: useBackgroundSession,
-            globs: [loadConfig.modelFileName]
+            globs: [loadConfig.modelConfig.weightsFileName]
         )
-        let modelFile = modelFolder.appendingPathComponent(loadConfig.modelFileName)
+        let modelFile = modelFolder.appendingPathComponent(loadConfig.modelConfig.weightsFileName)
         return try await loadModelBundle(from: modelFile)
     }
 

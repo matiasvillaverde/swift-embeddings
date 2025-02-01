@@ -35,8 +35,8 @@ extension Clip {
         loadConfig: LoadConfig = LoadConfig()
     ) async throws -> Clip.ModelBundle {
         let tokenizer = try loadClipTokenizer(at: modelFolder)
-        let weightsUrl = modelFolder.appendingPathComponent(loadConfig.modelFileName)
-        let configUrl = modelFolder.appendingPathComponent(loadConfig.configFileName)
+        let weightsUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.weightsFileName)
+        let configUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.configFileName)
         let config = try Clip.loadConfig(at: configUrl)
         let textModel = try Clip.loadModel(
             weightsUrl: weightsUrl,
@@ -58,10 +58,10 @@ extension Clip {
         let embeddings = try Clip.Embeddings(
             tokenEmbedding: MLTensorUtils.embedding(
                 weight: safetensors.mlTensor(
-                    forKey: loadConfig.weightKeyTransform(
+                    forKey: loadConfig.modelConfig.weightKeyTransform(
                         "text_model.embeddings.token_embedding.weight"))),
             positionEmbeddingWeight: safetensors.mlTensor(
-                forKey: loadConfig.weightKeyTransform(
+                forKey: loadConfig.modelConfig.weightKeyTransform(
                     "text_model.embeddings.position_embedding.weight")))
         var encoderLayers = [Clip.EncoderLayer]()
         encoderLayers.reserveCapacity(config.textConfig.numHiddenLayers)
@@ -69,65 +69,65 @@ extension Clip {
             let attention = try Clip.Attention(
                 qProj: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.q_proj.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.q_proj.bias"))),
                 kProj: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.k_proj.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.k_proj.bias"))),
                 vProj: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.v_proj.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.v_proj.bias"))),
                 outProj: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.out_proj.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).self_attn.out_proj.bias"))),
                 numHeads: config.textConfig.numAttentionHeads)
             let mlp = try Clip.MLP(
                 fc1: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).mlp.fc1.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).mlp.fc1.bias"))),
                 fc2: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).mlp.fc2.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).mlp.fc2.bias"))))
             let layer = try Clip.EncoderLayer(
                 selfAttnention: attention,
                 mlp: mlp,
                 layerNorm1: MLTensorUtils.layerNorm(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).layer_norm1.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).layer_norm1.bias")),
                     epsilon: config.textConfig.layerNormEps),
                 layerNorm2: MLTensorUtils.layerNorm(
                     weight: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).layer_norm2.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: loadConfig.weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "text_model.encoder.layers.\(i).layer_norm2.bias")),
                     epsilon: config.textConfig.layerNormEps))
             encoderLayers.append(layer)
@@ -138,12 +138,14 @@ extension Clip {
             encoder: encoder,
             finalLayerNorm: MLTensorUtils.layerNorm(
                 weight: safetensors.mlTensor(
-                    forKey: loadConfig.weightKeyTransform("text_model.final_layer_norm.weight")),
+                    forKey: loadConfig.modelConfig.weightKeyTransform(
+                        "text_model.final_layer_norm.weight")),
                 bias: safetensors.mlTensor(
-                    forKey: loadConfig.weightKeyTransform("text_model.final_layer_norm.bias")),
+                    forKey: loadConfig.modelConfig.weightKeyTransform(
+                        "text_model.final_layer_norm.bias")),
                 epsilon: config.textConfig.layerNormEps),
             textProjection: MLTensorUtils.linear(
                 weight: safetensors.mlTensor(
-                    forKey: loadConfig.weightKeyTransform("text_projection.weight"))))
+                    forKey: loadConfig.modelConfig.weightKeyTransform("text_projection.weight"))))
     }
 }

@@ -36,8 +36,8 @@ extension Model2Vec {
         loadConfig: LoadConfig = LoadConfig()
     ) async throws -> Model2Vec.ModelBundle {
         let tokenizer = try await AutoTokenizer.from(modelFolder: modelFolder)
-        let weightsUrl = modelFolder.appendingPathComponent(loadConfig.modelFileName)
-        let configUrl = modelFolder.appendingPathComponent(loadConfig.configFileName)
+        let weightsUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.weightsFileName)
+        let configUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.configFileName)
         let config = try Model2Vec.loadConfig(at: configUrl)
         let model = try Model2Vec.loadModel(
             weightsUrl: weightsUrl,
@@ -59,7 +59,8 @@ extension Model2Vec {
         loadConfig: LoadConfig = LoadConfig()
     ) throws -> Model2Vec.Model {
         let data = try Safetensors.read(at: weightsUrl)
-        let embeddings = try data.mlTensor(forKey: loadConfig.weightKeyTransform("embeddings"))
+        let embeddings = try data.mlTensor(
+            forKey: loadConfig.modelConfig.weightKeyTransform("embeddings"))
         return Model2Vec.Model(embeddings: embeddings, normalize: normalize)
     }
 }

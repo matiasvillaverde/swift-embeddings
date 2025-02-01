@@ -2,26 +2,16 @@ import CoreML
 import Foundation
 import MLTensorUtils
 
-public enum Model2Vec {}
-
-extension Model2Vec {
-    public struct ModelConfig: Codable {
-        public var normalize: Bool?
-
-        public init(normalize: Bool? = nil) {
-            self.normalize = normalize
-        }
-    }
-}
+public enum StaticEmbeddings {}
 
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
-extension Model2Vec {
+extension StaticEmbeddings {
     public struct ModelBundle: Sendable {
-        public let model: Model2Vec.Model
+        public let model: StaticEmbeddings.Model
         public let tokenizer: any TextTokenizer
 
         public init(
-            model: Model2Vec.Model,
+            model: StaticEmbeddings.Model,
             tokenizer: any TextTokenizer
         ) {
             self.model = model
@@ -31,24 +21,38 @@ extension Model2Vec {
         public func encode(
             _ text: String,
             normalize: Bool = false,
-            maxLength: Int? = nil
+            maxLength: Int? = nil,
+            truncateDimension: Int? = nil
         ) throws -> MLTensor {
-            try batchEncode([text], normalize: normalize, maxLength: maxLength)
+            try batchEncode(
+                [text],
+                normalize: normalize,
+                maxLength: maxLength,
+                truncateDimension: truncateDimension
+            )
         }
 
         public func batchEncode(
             _ texts: [String],
             normalize: Bool = false,
-            maxLength: Int? = nil
+            maxLength: Int? = nil,
+            truncateDimension: Int? = nil
         ) throws -> MLTensor {
+            let dimension =
+                if let truncateDimension {
+                    min(truncateDimension, model.dimension)
+                } else {
+                    model.dimension
+                }
+            precondition(dimension > 0, "Dimension must be greater than 0")
             let inputIdsBatch = try texts.map { try tokenize($0, maxLength: maxLength) }
             let embeddingsBatch = inputIdsBatch.map { inputIds in
                 if let inputIds {
                     model.embeddings
                         .gathering(atIndices: inputIds, alongAxis: 0)
-                        .mean(alongAxes: 0)
+                        .mean(alongAxes: 0)[0..<dimension]
                 } else {
-                    MLTensor(zeros: [model.dimienstion], scalarType: Int32.self)
+                    MLTensor(zeros: [dimension], scalarType: Int32.self)
                 }
             }
             let embeddings = MLTensor(stacking: embeddingsBatch, alongAxis: 0).cast(to: Float.self)
@@ -64,30 +68,22 @@ extension Model2Vec {
             _ text: String,
             maxLength: Int?
         ) throws -> MLTensor? {
-            let tokensIds = try tokenizer.tokenizeText(
+            let tokens = try tokenizer.tokenizeText(
                 text, maxLength: maxLength, addSpecialTokens: false)
-            let tokens =
-                if let unknownTokenId = tokenizer.unknownTokenId {
-                    tokensIds.filter { $0 != unknownTokenId }
-                } else {
-                    tokensIds
-                }
             return tokens.isEmpty ? nil : MLTensor(shape: [tokens.count], scalars: tokens)
         }
     }
 }
 
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
-extension Model2Vec {
+extension StaticEmbeddings {
     public struct Model: Sendable {
         public let embeddings: MLTensor
-        public let dimienstion: Int
-        public let normalize: Bool
+        public let dimension: Int
 
-        public init(embeddings: MLTensor, normalize: Bool = false) {
+        public init(embeddings: MLTensor) {
             self.embeddings = embeddings
-            self.dimienstion = embeddings.shape[1]
-            self.normalize = normalize
+            self.dimension = embeddings.shape[1]
         }
     }
 }

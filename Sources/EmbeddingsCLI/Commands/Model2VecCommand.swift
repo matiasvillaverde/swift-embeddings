@@ -13,7 +13,7 @@ struct Model2VecCommand: AsyncParsableCommand {
 
     func run() async throws {
         let modelBundle = try await Model2Vec.loadModelBundle(from: modelId)
-        let encoded = try modelBundle.encode(text)
+        let encoded = try modelBundle.encode(text, normalize: modelBundle.model.normalize)
         let result = await encoded.cast(to: Float.self).shapedArray(of: Float.self).scalars
         print(result)
     }

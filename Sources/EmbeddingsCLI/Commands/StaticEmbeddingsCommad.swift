@@ -3,21 +3,20 @@ import Embeddings
 import Foundation
 
 @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
-struct BertCommand: AsyncParsableCommand {
+struct StaticEmbeddingsCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "bert",
-        abstract: "Encode text using BERT model"
+        commandName: "static-embeddings",
+        abstract: "Encode text using StaticEmbeddings model"
     )
-    @Option var modelId: String = "google-bert/bert-base-uncased"
+    @Option var modelId: String = "sentence-transformers/static-retrieval-mrl-en-v1"
     @Option var text: String = "Text to encode"
-    @Option var maxLength: Int = 512
 
     func run() async throws {
-        let modelBundle = try await Bert.loadModelBundle(
+        let modelBundle = try await StaticEmbeddings.loadModelBundle(
             from: modelId,
-            loadConfig: LoadConfig.googleBert
+            loadConfig: LoadConfig.staticEmbeddings
         )
-        let encoded = try modelBundle.encode(text, maxLength: maxLength)
+        let encoded = try modelBundle.encode(text)
         let result = await encoded.cast(to: Float.self).shapedArray(of: Float.self).scalars
         print(result)
     }

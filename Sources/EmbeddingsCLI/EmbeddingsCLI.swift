@@ -10,6 +10,7 @@ extension CommandConfiguration {
             ClipCommand.self,
             Model2VecCommand.self,
             XLMRobertaCommand.self,
+            StaticEmbeddingsCommand.self,
             Word2VecCommand.self,
         ]
     )

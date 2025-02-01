@@ -18,7 +18,7 @@ extension XLMRoberta {
         from hubRepoId: String,
         downloadBase: URL? = nil,
         useBackgroundSession: Bool = false,
-        weightKeyTransform: ((String) -> String) = { $0 }
+        loadConfig: LoadConfig = LoadConfig()
     ) async throws -> XLMRoberta.ModelBundle {
         let modelFolder = try await downloadModelFromHub(
             from: hubRepoId,
@@ -27,13 +27,13 @@ extension XLMRoberta {
         )
         return try await loadModelBundle(
             from: modelFolder,
-            weightKeyTransform: weightKeyTransform
+            loadConfig: loadConfig
         )
     }
 
     public static func loadModelBundle(
         from modelFolder: URL,
-        weightKeyTransform: ((String) -> String) = { $0 }
+        loadConfig: LoadConfig = LoadConfig()
     ) async throws -> XLMRoberta.ModelBundle {
         let addedTokens = try await loadAddedTokens(from: modelFolder)
         let tokenizerModelUrl = try findSentencePieceModel(in: modelFolder)
@@ -41,14 +41,13 @@ extension XLMRoberta {
             tokenizerModelUrl: tokenizerModelUrl,
             addedTokens: addedTokens
         )
-        // NOTE: just `safetensors` support for now
-        let weightsUrl = modelFolder.appendingPathComponent("model.safetensors")
-        let configUrl = modelFolder.appendingPathComponent("config.json")
+        let weightsUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.weightsFileName)
+        let configUrl = modelFolder.appendingPathComponent(loadConfig.modelConfig.configFileName)
         let config = try XLMRoberta.loadConfig(at: configUrl)
         let model = try XLMRoberta.loadModel(
             weightsUrl: weightsUrl,
             config: config,
-            weightKeyTransform: weightKeyTransform
+            loadConfig: loadConfig
         )
         return XLMRoberta.ModelBundle(model: model, tokenizer: tokenizer)
     }
@@ -88,26 +87,29 @@ extension XLMRoberta {
     public static func loadModel(
         weightsUrl: URL,
         config: XLMRoberta.ModelConfig,
-        weightKeyTransform: ((String) -> String) = { $0 }
+        loadConfig: LoadConfig = LoadConfig()
     ) throws -> XLMRoberta.Model {
         let safetensors = try Safetensors.read(at: weightsUrl)
         let wordEmbeddings = try MLTensorUtils.embedding(
             weight: safetensors.mlTensor(
-                forKey: weightKeyTransform("embeddings.word_embeddings.weight")))
+                forKey: loadConfig.modelConfig.weightKeyTransform(
+                    "embeddings.word_embeddings.weight")))
 
         let tokenTypeEmbeddings = try MLTensorUtils.embedding(
             weight: safetensors.mlTensor(
-                forKey: weightKeyTransform("embeddings.token_type_embeddings.weight")))
+                forKey: loadConfig.modelConfig.weightKeyTransform(
+                    "embeddings.token_type_embeddings.weight")))
 
         let positionEmbeddings = try MLTensorUtils.embedding(
             weight: safetensors.mlTensor(
-                forKey: weightKeyTransform("embeddings.position_embeddings.weight")))
+                forKey: loadConfig.modelConfig.weightKeyTransform(
+                    "embeddings.position_embeddings.weight")))
 
         let layerNorm = try MLTensorUtils.layerNorm(
             weight: safetensors.mlTensor(
-                forKey: weightKeyTransform("embeddings.LayerNorm.weight")),
+                forKey: loadConfig.modelConfig.weightKeyTransform("embeddings.LayerNorm.weight")),
             bias: safetensors.mlTensor(
-                forKey: weightKeyTransform("embeddings.LayerNorm.bias")),
+                forKey: loadConfig.modelConfig.weightKeyTransform("embeddings.LayerNorm.bias")),
             epsilon: config.layerNormEps)
 
         let embeddings = XLMRoberta.Embeddings(
@@ -125,24 +127,25 @@ extension XLMRoberta {
             let bertSelfAttention = try XLMRoberta.SelfAttention(
                 query: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.self.query.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.self.query.bias"))),
                 key: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.self.key.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).attention.self.key.bias")
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).attention.self.key.bias")
                     )),
                 value: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.self.value.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.self.value.bias"))),
                 numAttentionHeads: config.numAttentionHeads,
                 attentionHeadSize: attentionHeadSize,
@@ -152,17 +155,17 @@ extension XLMRoberta {
             let bertSelfOutput = try XLMRoberta.SelfOutput(
                 dense: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.output.dense.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.output.dense.bias"))),
                 layerNorm: MLTensorUtils.layerNorm(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.output.LayerNorm.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).attention.output.LayerNorm.bias")),
                     epsilon: config.layerNormEps)
             )
@@ -173,24 +176,29 @@ extension XLMRoberta {
             let bertIntermediate = try XLMRoberta.Intermediate(
                 dense: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform(
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
                             "encoder.layer.\(layer).intermediate.dense.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).intermediate.dense.bias")
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).intermediate.dense.bias")
                     ))
             )
             let bertOutput = try XLMRoberta.Output(
                 dense: MLTensorUtils.linear(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).output.dense.weight")),
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).output.dense.weight")),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).output.dense.bias"))),
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).output.dense.bias"))),
                 layerNorm: MLTensorUtils.layerNorm(
                     weight: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).output.LayerNorm.weight")
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).output.LayerNorm.weight")
                     ),
                     bias: safetensors.mlTensor(
-                        forKey: weightKeyTransform("encoder.layer.\(layer).output.LayerNorm.bias")),
+                        forKey: loadConfig.modelConfig.weightKeyTransform(
+                            "encoder.layer.\(layer).output.LayerNorm.bias")),
                     epsilon: config.layerNormEps))
 
             let bertLayer = XLMRoberta.Layer(
@@ -206,9 +214,11 @@ extension XLMRoberta {
                     try XLMRoberta.Pooler(
                         dense: MLTensorUtils.linear(
                             weight: safetensors.mlTensor(
-                                forKey: weightKeyTransform("pooler.dense.weight")),
+                                forKey: loadConfig.modelConfig.weightKeyTransform(
+                                    "pooler.dense.weight")),
                             bias: safetensors.mlTensor(
-                                forKey: weightKeyTransform("pooler.dense.bias"))))
+                                forKey: loadConfig.modelConfig.weightKeyTransform(
+                                    "pooler.dense.bias"))))
                 } else {
                     nil
                 }
@@ -217,8 +227,10 @@ extension XLMRoberta {
                 try XLMRoberta.Pooler(
                     dense: MLTensorUtils.linear(
                         weight: safetensors.mlTensor(
-                            forKey: weightKeyTransform("pooler.dense.weight")),
-                        bias: safetensors.mlTensor(forKey: weightKeyTransform("pooler.dense.bias")))
+                            forKey: loadConfig.modelConfig.weightKeyTransform("pooler.dense.weight")
+                        ),
+                        bias: safetensors.mlTensor(
+                            forKey: loadConfig.modelConfig.weightKeyTransform("pooler.dense.bias")))
                 )
             }
 

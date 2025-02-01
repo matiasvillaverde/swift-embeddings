@@ -4,13 +4,16 @@
 #     "torch",
 #     "transformers",
 #     "model2vec",
+#     "sentence-transformers",
 # ]
 # ///
 
 
+import warnings
 from transformers import AutoTokenizer, AutoModel
 from transformers import CLIPModel
 from model2vec import StaticModel
+from sentence_transformers import SentenceTransformer
 import argparse
 
 
@@ -36,6 +39,12 @@ def model2vec_embeddings(model_dir, text):
     return output.flatten().tolist()
 
 
+def static_embeddings(model_dir, text):
+    model = SentenceTransformer(model_dir, truncate_dim=1023)
+    output = model.encode(text, normalize_embeddings=True)
+    return output.flatten().tolist()
+
+
 def main(model_dir, text, emb_type="bert"):
     if emb_type == "bert" or emb_type == "xlm-roberta":
         values = embeddings(model_dir, text)
@@ -43,6 +52,8 @@ def main(model_dir, text, emb_type="bert"):
         values = clip_embeddings(model_dir, text)
     elif emb_type == "model2vec":
         values = model2vec_embeddings(model_dir, text)
+    elif emb_type == "static-embeddings":
+        values = static_embeddings(model_dir, text)
     else:
         raise ValueError(f"Unknown emb_type: {emb_type}")
     print("\n".join([str(x) for x in values]))
@@ -50,6 +61,7 @@ def main(model_dir, text, emb_type="bert"):
 
 # run e.g: `uv run generate.py "./cache/google-bert/bert-base-uncased" "Text to encode"` bert
 if __name__ == "__main__":
+    warnings.filterwarnings("ignore")
     parser = argparse.ArgumentParser()
     parser.add_argument("model_dir", type=str, help="Model local dir")
     parser.add_argument("text", type=str, help="Text to embed")

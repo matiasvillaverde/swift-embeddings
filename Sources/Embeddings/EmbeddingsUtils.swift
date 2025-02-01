@@ -47,18 +47,67 @@ extension String {
     }
 }
 
-public struct LoadConfig {
-    public let modelFileName: String
+public struct TokenizerConfig {
+    public let dataFileName: String
+    public let tokenizerClass: String
+
+    public init(
+        dataFileName: String = "tokenizer.json",
+        tokenizerClass: String = "BertTokenizer"
+    ) {
+        self.dataFileName = dataFileName
+        self.tokenizerClass = tokenizerClass
+    }
+}
+
+public struct ModelConfig {
     public let configFileName: String
+    public let weightsFileName: String
     public let weightKeyTransform: ((String) -> String)
 
     public init(
-        modelFileName: String = "model.safetensors",
         configFileName: String = "config.json",
+        weightsFileName: String = "model.safetensors",
         weightKeyTransform: @escaping ((String) -> String) = { $0 }
     ) {
-        self.modelFileName = modelFileName
         self.configFileName = configFileName
+        self.weightsFileName = weightsFileName
         self.weightKeyTransform = weightKeyTransform
+    }
+}
+
+public struct LoadConfig {
+    public let modelConfig: ModelConfig
+    public let tokenizerConfig: TokenizerConfig?
+
+    public init(
+        modelConfig: ModelConfig = ModelConfig(),
+        tokenizerConfig: TokenizerConfig? = nil
+    ) {
+        self.modelConfig = modelConfig
+        self.tokenizerConfig = tokenizerConfig
+    }
+}
+
+@available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
+extension LoadConfig {
+    public static var googleBert: LoadConfig {
+        LoadConfig(
+            modelConfig: ModelConfig(
+                weightKeyTransform: Bert.googleWeightsKeyTransform
+            )
+        )
+    }
+
+    public static var staticEmbeddings: LoadConfig {
+        LoadConfig(
+            modelConfig: ModelConfig(
+                weightsFileName: "0_StaticEmbedding/model.safetensors"
+            ),
+            tokenizerConfig: TokenizerConfig(
+                dataFileName: "0_StaticEmbedding/tokenizer.json",
+                tokenizerClass: "BertTokenizer"
+            )
+        )
     }
 }

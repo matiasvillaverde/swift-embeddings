@@ -55,12 +55,23 @@ Some of the supported models on `Hugging Face`:
 
 ### Model2Vec
 
+More info [here](https://huggingface.co/blog/Pringled/model2vec).
+
 Some of the supported models on `Hugging Face`:
 
 - [minishlab/potion-base-2M](https://huggingface.co/minishlab/potion-base-2M)
 - [minishlab/potion-base-4M](https://huggingface.co/minishlab/potion-base-4M)
 - [minishlab/potion-base-8M](https://huggingface.co/minishlab/potion-base-8M)
 - [minishlab/M2V_base_output](https://huggingface.co/minishlab/M2V_base_output)
+
+### Static Embeddings
+
+More info [here](https://huggingface.co/blog/static-embeddings).
+
+Some of the supported models on `Hugging Face`:
+
+- [sentence-transformers/static-retrieval-mrl-en-v1](https://huggingface.co/sentence-transformers/static-retrieval-mrl-en-v1)
+- [sentence-transformers/static-similarity-mrl-multilingual-v1](https://huggingface.co/sentence-transformers/static-similarity-mrl-multilingual-v1)
 
 ## Installation
 
@@ -133,6 +144,8 @@ Subcommands:
 ```bash
 bert                    Encode text using BERT model
 clip                    Encode text using CLIP model
+model2vec               Encode text using Model2Vec model
+static-embeddings       Encode text using Static Embeddings model
 xlm-roberta             Encode text using XLMRoberta model
 word2vec                Encode word using Word2Vec model
 ```

@@ -11,3 +11,17 @@ import Testing
     #expect(Bert.googleWeightsKeyTransform("some.Embedding.weight") == "bert.some.Embedding.weight")
     #expect(Bert.googleWeightsKeyTransform("some.Embedding.bias") == "bert.some.Embedding.bias")
 }
+
+final class TextTokenizerMock: TextTokenizer {
+    let tokenizedValues: [Int32]
+    let unknownTokenId: Int?
+
+    init(tokenizedValues: [Int32], unknownTokenId: Int? = nil) {
+        self.tokenizedValues = tokenizedValues
+        self.unknownTokenId = unknownTokenId
+    }
+
+    func tokenizeText(_ text: String, maxLength: Int?, addSpecialTokens: Bool) throws -> [Int32] {
+        tokenizedValues
+    }
+}

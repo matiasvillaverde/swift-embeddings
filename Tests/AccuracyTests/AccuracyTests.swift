@@ -14,7 +14,7 @@ import TestingUtils
  This suite can be run using the following command from the command line:
 
  ```
- UV_PATH=$(which uv) swift test --filter AccuracyTests
+ PYTORCH_ENABLE_MPS_FALLBACK=1 UV_PATH=$(which uv) swift test --filter AccuracyTests
  ```
 
 */
@@ -38,7 +38,12 @@ func generateUsingTransformers(
         result
         .components(separatedBy: .newlines)
         .filter { !$0.isEmpty }
-        .map { Float($0)! }
+        .map { stringValue -> Float in
+            guard let value = Float(stringValue) else {
+                fatalError("Invalid float value in stdout: \(stringValue)")
+            }
+            return value
+        }
 }
 
 func modelPath(modelId: String, cacheDirectory: URL) -> String {
@@ -52,6 +57,7 @@ enum ModelType: String {
     case bert
     case clip
     case model2Vec = "model2vec"
+    case staticEmbeddings = "static-embeddings"
     case xlmRoberta = "xlm-roberta"
 }
 
@@ -61,15 +67,15 @@ enum ModelType: String {
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
     @Test(
         "Bert Accuracy",
-        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil)
+        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil),
+        arguments: ["Text to encode", "", "❤️"]
     )
-    func bertAccuracy() async throws {
-        let text = "Text to encode"
+    func bertAccuracy(_ text: String) async throws {
         let modelId = "google-bert/bert-base-uncased"
         let modelBundle = try await Bert.loadModelBundle(
             from: modelId,
             downloadBase: cacheDirectory,
-            loadConfig: LoadConfig(weightKeyTransform: Bert.googleWeightsKeyTransform)
+            loadConfig: LoadConfig.googleBert
         )
         let encoded = try modelBundle.encode(text)
         let swiftData = await encoded.cast(to: Float.self).scalars(of: Float.self)
@@ -116,10 +122,10 @@ enum ModelType: String {
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
     @Test(
         "XLM Roberta Accuracy",
-        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil)
+        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil),
+        arguments: ["Text to encode", "", "❤️"]
     )
-    func xlmRobertaAccuracy() async throws {
-        let text = "Text to encode"
+    func xlmRobertaAccuracy(_ text: String) async throws {
         let modelId = "tomaarsen/xlm-roberta-base-multilingual-en-ar-fr-de-es-tr-it"
         let modelBundle = try await XLMRoberta.loadModelBundle(
             from: modelId,
@@ -140,22 +146,47 @@ enum ModelType: String {
     @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
     @Test(
         "Model2Vec Accuracy",
-        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil)
+        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil),
+        arguments: ["Text to encode", "", "❤️"]
     )
-    func model2VecAccuracy() async throws {
-        let text = "Text to encode"
+    func model2VecAccuracy(_ text: String) async throws {
         let modelId = "minishlab/potion-base-2M"
         let modelBundle = try await Model2Vec.loadModelBundle(
             from: modelId,
             downloadBase: cacheDirectory
         )
-        let encoded = try modelBundle.encode(text)
+        let encoded = try modelBundle.encode(text, normalize: modelBundle.model.normalize)
         let swiftData = await encoded.cast(to: Float.self).scalars(of: Float.self)
         let modelPath = modelPath(modelId: modelId, cacheDirectory: cacheDirectory)
         let pythonData = try await generateUsingTransformers(
             modelPath: modelPath,
             text: text,
             modelType: .model2Vec
+        )
+
+        #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)
+    }
+
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, visionOS 2.0, watchOS 11.0, *)
+    @Test(
+        "Static Embeddings Accuracy",
+        .enabled(if: ProcessInfo.processInfo.environment["UV_PATH"] != nil),
+        arguments: ["Text to encode", "", "❤️"]
+    )
+    func staticEmbeddingsAccuracy(_ text: String) async throws {
+        let modelId = "sentence-transformers/static-retrieval-mrl-en-v1"
+        let modelBundle = try await StaticEmbeddings.loadModelBundle(
+            from: modelId,
+            downloadBase: cacheDirectory,
+            loadConfig: LoadConfig.staticEmbeddings
+        )
+        let encoded = try modelBundle.encode(text, normalize: true, truncateDimension: 1023)
+        let swiftData = await encoded.cast(to: Float.self).scalars(of: Float.self)
+        let modelPath = modelPath(modelId: modelId, cacheDirectory: cacheDirectory)
+        let pythonData = try await generateUsingTransformers(
+            modelPath: modelPath,
+            text: text,
+            modelType: .staticEmbeddings
         )
 
         #expect(allClose(pythonData, swiftData, absoluteTolerance: 1e-5) == true)
