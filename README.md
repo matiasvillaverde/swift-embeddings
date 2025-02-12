@@ -62,6 +62,8 @@ Some of the supported models on `Hugging Face`:
 - [minishlab/potion-base-2M](https://huggingface.co/minishlab/potion-base-2M)
 - [minishlab/potion-base-4M](https://huggingface.co/minishlab/potion-base-4M)
 - [minishlab/potion-base-8M](https://huggingface.co/minishlab/potion-base-8M)
+- [minishlab/potion-retrieval-32M](https://huggingface.co/minishlab/potion-retrieval-32M)
+- [minishlab/potion-base-32M](https://huggingface.co/minishlab/potion-base-32M)
 - [minishlab/M2V_base_output](https://huggingface.co/minishlab/M2V_base_output)
 
 ### Static Embeddings

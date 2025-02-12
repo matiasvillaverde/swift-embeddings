@@ -31,9 +31,9 @@ extension StaticEmbeddings {
         let tokenizer =
             if let tokenizerConfig = loadConfig.tokenizerConfig {
                 try AutoTokenizer.from(
-                    tokenizerDataFile: modelFolder.appendingPathComponent(
-                        tokenizerConfig.dataFileName),
-                    tokenizerClass: tokenizerConfig.tokenizerClass
+                    modelFolder: modelFolder,
+                    tokenizerData: tokenizerConfig.data,
+                    tokenizerConfig: tokenizerConfig.config
                 )
             } else {
                 try await AutoTokenizer.from(modelFolder: modelFolder)
@@ -65,17 +65,35 @@ extension StaticEmbeddings {
 
 extension AutoTokenizer {
     static func from(
-        tokenizerDataFile: URL,
-        tokenizerClass: String
+        modelFolder: URL,
+        tokenizerData: TokenizerConfigType,
+        tokenizerConfig: TokenizerConfigType
     ) throws -> any Tokenizer {
-        let data = try Data(contentsOf: tokenizerDataFile)
-        let parsedData = try JSONSerialization.jsonObject(with: data, options: [])
-        guard let tokenizerData = parsedData as? [NSString: Any] else {
-            throw EmbeddingsError.invalidFile
-        }
+        let tokenizerConfig = try resolveConfig(tokenizerConfig, in: modelFolder)
+        let tokenizerData = try resolveConfig(tokenizerData, in: modelFolder)
         return try AutoTokenizer.from(
-            tokenizerConfig: Config(["tokenizerClass": tokenizerClass]),
-            tokenizerData: Config(tokenizerData)
+            tokenizerConfig: tokenizerConfig,
+            tokenizerData: tokenizerData
         )
     }
+}
+
+func resolveConfig(_ tokenizerConfig: TokenizerConfigType, in modelFolder: URL) throws -> Config {
+    switch tokenizerConfig {
+    case .filePath(let filePath):
+        let fileURL = modelFolder.appendingPathComponent(filePath)
+        let data = try loadJSONConfig(at: fileURL)
+        return Config(data as [NSString: Any])
+    case .data(let data):
+        return Config(data as [NSString: Any])
+    }
+}
+
+func loadJSONConfig(at filePath: URL) throws -> [String: Any] {
+    let data = try Data(contentsOf: filePath)
+    let parsedData = try JSONSerialization.jsonObject(with: data, options: [])
+    guard let config = parsedData as? [String: Any] else {
+        throw EmbeddingsError.invalidFile
+    }
+    return config
 }

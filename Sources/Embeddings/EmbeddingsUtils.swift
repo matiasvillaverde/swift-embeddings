@@ -47,16 +47,21 @@ extension String {
     }
 }
 
+public enum TokenizerConfigType {
+    case filePath(String)
+    case data([String: Any])
+}
+
 public struct TokenizerConfig {
-    public let dataFileName: String
-    public let tokenizerClass: String
+    public let data: TokenizerConfigType
+    public let config: TokenizerConfigType
 
     public init(
-        dataFileName: String = "tokenizer.json",
-        tokenizerClass: String = "BertTokenizer"
+        data: TokenizerConfigType = .filePath("tokenizer.json"),
+        config: TokenizerConfigType = .filePath("tokenizer_config.json")
     ) {
-        self.dataFileName = dataFileName
-        self.tokenizerClass = tokenizerClass
+        self.data = data
+        self.config = config
     }
 }
 
@@ -104,9 +109,11 @@ extension LoadConfig {
             modelConfig: ModelConfig(
                 weightsFileName: "0_StaticEmbedding/model.safetensors"
             ),
+            // In case of `StaticEmbeddings` tokenizer `data` is loaded from `0_StaticEmbedding/tokenizer.json` file
+            // and tokenizer `config` is a dictionary with a single key `tokenizerClass` and value `BertTokenizer`.
             tokenizerConfig: TokenizerConfig(
-                dataFileName: "0_StaticEmbedding/tokenizer.json",
-                tokenizerClass: "BertTokenizer"
+                data: .filePath("0_StaticEmbedding/tokenizer.json"),
+                config: .data(["tokenizerClass": "BertTokenizer"])
             )
         )
     }
