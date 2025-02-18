@@ -33,7 +33,7 @@ let package = Package(
             from: "0.0.7"
         ),
         .package(
-            url: "https://github.com/jkrukowski/swift-sentencepiece",
+            url: "https://github.com/matiasvillaverde/swift-sentencepiece",
             branch: "main"
         ),
     ],
