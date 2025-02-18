@@ -12,10 +12,6 @@ let package = Package(
         .watchOS(.v10),
     ],
     products: [
-        .executable(
-            name: "embeddings-cli",
-            targets: ["EmbeddingsCLI"]
-        ),
         .library(
             name: "Embeddings",
             targets: ["Embeddings"]),
@@ -25,7 +21,7 @@ let package = Package(
     ],
     dependencies: [
         .package(
-            url: "https://github.com/apple/swift-numerics.git",
+            url: "https://github.com/apple/swift-numerics",
             from: "1.0.2"
         ),
         .package(
@@ -37,28 +33,11 @@ let package = Package(
             from: "0.0.7"
         ),
         .package(
-            url: "https://github.com/apple/swift-argument-parser.git",
-            from: "1.5.0"
-        ),
-        .package(
             url: "https://github.com/jkrukowski/swift-sentencepiece",
-            from: "0.0.5"
-        ),
-        .package(
-            url: "https://github.com/tuist/Command.git",
-            from: "0.11.16"
+            branch: "main"
         ),
     ],
     targets: [
-        .executableTarget(
-            name: "EmbeddingsCLI",
-            dependencies: [
-                "Embeddings",
-                "MLTensorUtils",
-                .product(name: "Safetensors", package: "swift-safetensors"),
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-            ]
-        ),
         .target(
             name: "Embeddings",
             dependencies: [
@@ -86,17 +65,6 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources")
-            ]
-        ),
-        .testTarget(
-            name: "AccuracyTests",
-            dependencies: [
-                "Embeddings",
-                "TestingUtils",
-                .product(name: "Command", package: "Command"),
-            ],
-            resources: [
-                .copy("Scripts")
             ]
         ),
         .testTarget(
